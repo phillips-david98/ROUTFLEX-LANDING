@@ -1,0 +1,799 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="ROUTflex é a plataforma enterprise de roteirização inteligente que automatiza territórios, otimiza rotas e entrega controle operacional em tempo real.">
+  <meta name="robots" content="index, follow">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="ROUTflex | Inteligência operacional para equipes de campo">
+  <meta property="og:description" content="Automatize territórios, otimize rotas e escale sua operação externa com inteligência de IA. ROUTflex — plataforma SaaS enterprise.">
+  <meta property="og:image" content="assets/cabecalho.png">
+  <meta property="og:locale" content="pt_BR">
+  <title>ROUTflex | Inteligência operacional para equipes de campo</title>
+  <link rel="icon" type="image/png" href="assets/logo.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="page-shell">
+
+    <header class="site-header" id="topo">
+      <div class="container header-inner">
+        <a class="brand" href="#topo" aria-label="ROUTflex inicio">
+          <img class="brand-logo" src="assets/logo.png" alt="Logo ROUTflex" loading="eager" width="42" height="42">
+          <span class="brand-text">
+            <strong><span class="brand-rout">ROUT</span><span class="brand-flex">flex</span></strong>
+            <small>ROUTING CONTROL TOWER</small>
+          </span>
+        </a>
+        <button class="nav-toggle" type="button" aria-label="Abrir menu" aria-expanded="false" aria-controls="main-nav">
+          <span class="bar bar-top"></span>
+          <span class="bar bar-bottom"></span>
+        </button>
+        <nav class="main-nav" id="main-nav" aria-label="Navegacao principal">
+          <a href="#beneficios">Resultados</a>
+          <a href="#funcionalidades">Plataforma</a>
+          <a href="#contato">Contato</a>
+        </nav>
+        <a class="button button-primary header-cta" href="#contato">Agendar demonstracao</a>
+      </div>
+    </header>
+
+    <main>
+
+      <section class="hero-section" aria-label="Apresentacao principal do ROUTflex">
+        <canvas class="hero-canvas" id="heroCanvas" aria-hidden="true"></canvas>
+        <div class="hero-bg" aria-hidden="true">
+          <span class="hero-orb orb-1"></span>
+          <span class="hero-orb orb-2"></span>
+          <span class="hero-orb orb-3"></span>
+        </div>
+        <div class="container hero-inner">
+          <div class="hero-copy reveal">
+            <span class="eyebrow eyebrow-light">Roteirizacao enterprise em tempo real</span>
+            <h1>Inteligencia operacional para quem nao pode errar no campo.</h1>
+            <p class="hero-lead">
+              O ROUTflex automatiza territorios, otimiza rotas e centraliza o controle de operacoes externas — com precisao de IA e escala enterprise.
+            </p>
+            <div class="hero-actions">
+              <a class="button button-primary" href="#contato">Agendar demonstracao</a>
+              <a class="button button-ghost" href="#funcionalidades">Explorar a plataforma</a>
+            </div>
+            <ul class="hero-points">
+              <li>Redistribuicao territorial automatizada com IA</li>
+              <li>Ganho mensuravel de produtividade em campo</li>
+              <li>Decisoes estrategicas com dados em tempo real</li>
+            </ul>
+          </div>
+          <div class="hero-visual" aria-hidden="true">
+            <div class="hero-map-panel">
+              <svg class="hero-map-svg" viewBox="0 0 560 480" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <filter id="glow-strong" x="-80%" y="-80%" width="260%" height="260%">
+                    <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur"/>
+                    <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                  </filter>
+                  <filter id="glow-soft" x="-50%" y="-50%" width="200%" height="200%">
+                    <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="blur"/>
+                    <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                  </filter>
+                  <filter id="glow-pulse" x="-120%" y="-120%" width="340%" height="340%">
+                    <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="blur"/>
+                    <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                  </filter>
+                  <radialGradient id="zone-a-fill" cx="50%" cy="50%" r="50%">
+                    <stop offset="0%" stop-color="#1d85f2" stop-opacity="0.18"/>
+                    <stop offset="100%" stop-color="#1d85f2" stop-opacity="0.04"/>
+                  </radialGradient>
+                  <radialGradient id="zone-b-fill" cx="50%" cy="50%" r="50%">
+                    <stop offset="0%" stop-color="#3ba8f5" stop-opacity="0.14"/>
+                    <stop offset="100%" stop-color="#3ba8f5" stop-opacity="0.03"/>
+                  </radialGradient>
+                  <radialGradient id="zone-c-fill" cx="50%" cy="50%" r="50%">
+                    <stop offset="0%" stop-color="#0e5fd4" stop-opacity="0.16"/>
+                    <stop offset="100%" stop-color="#0e5fd4" stop-opacity="0.03"/>
+                  </radialGradient>
+                  <radialGradient id="zone-d-fill" cx="50%" cy="50%" r="50%">
+                    <stop offset="0%" stop-color="#4ab8f7" stop-opacity="0.12"/>
+                    <stop offset="100%" stop-color="#4ab8f7" stop-opacity="0.02"/>
+                  </radialGradient>
+                  <linearGradient id="route-grad-1" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#1d85f2" stop-opacity="0"/>
+                    <stop offset="50%" stop-color="#3ba8f5" stop-opacity="0.9"/>
+                    <stop offset="100%" stop-color="#1d85f2" stop-opacity="0"/>
+                  </linearGradient>
+                  <linearGradient id="route-grad-2" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#4ab8f7" stop-opacity="0"/>
+                    <stop offset="50%" stop-color="#4ab8f7" stop-opacity="0.7"/>
+                    <stop offset="100%" stop-color="#4ab8f7" stop-opacity="0"/>
+                  </linearGradient>
+                  <linearGradient id="neon-route-grad" gradientUnits="userSpaceOnUse" x1="80" y1="430" x2="520" y2="80">
+                    <stop offset="0%" stop-color="#1d85f2" stop-opacity="0.90"/>
+                    <stop offset="48%" stop-color="#9b5de5" stop-opacity="0.95"/>
+                    <stop offset="100%" stop-color="#3ba8f5" stop-opacity="0.80"/>
+                  </linearGradient>
+                  <linearGradient id="neon-route-grad-2" gradientUnits="userSpaceOnUse" x1="100" y1="100" x2="490" y2="400">
+                    <stop offset="0%" stop-color="#3ba8f5" stop-opacity="0.85"/>
+                    <stop offset="50%" stop-color="#7c3aed" stop-opacity="0.92"/>
+                    <stop offset="100%" stop-color="#1d85f2" stop-opacity="0.75"/>
+                  </linearGradient>
+                  <filter id="glow-neon" x="-80%" y="-80%" width="260%" height="260%">
+                    <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur"/>
+                    <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                  </filter>
+                  <clipPath id="map-clip">
+                    <rect x="0" y="0" width="560" height="480"/>
+                  </clipPath>
+                </defs>
+
+                <!-- Hexagon territory grid (subtle) -->
+                <g clip-path="url(#map-clip)" opacity="0.35">
+                  <!-- Row 1 -->
+                  <polygon points="200,30 228,46 228,78 200,94 172,78 172,46" fill="none" stroke="rgba(59,168,245,0.22)" stroke-width="0.8"/>
+                  <polygon points="256,30 284,46 284,78 256,94 228,78 228,46" fill="none" stroke="rgba(59,168,245,0.18)" stroke-width="0.8"/>
+                  <polygon points="312,30 340,46 340,78 312,94 284,78 284,46" fill="none" stroke="rgba(59,168,245,0.16)" stroke-width="0.8"/>
+                  <polygon points="368,30 396,46 396,78 368,94 340,78 340,46" fill="none" stroke="rgba(59,168,245,0.14)" stroke-width="0.8"/>
+                  <polygon points="424,30 452,46 452,78 424,94 396,78 396,46" fill="none" stroke="rgba(59,168,245,0.12)" stroke-width="0.8"/>
+                  <polygon points="480,30 508,46 508,78 480,94 452,78 452,46" fill="none" stroke="rgba(59,168,245,0.10)" stroke-width="0.8"/>
+                  <!-- Row 2 offset -->
+                  <polygon points="172,78 200,94 200,126 172,142 144,126 144,94" fill="none" stroke="rgba(59,168,245,0.20)" stroke-width="0.8"/>
+                  <polygon points="228,78 256,94 256,126 228,142 200,126 200,94" fill="none" stroke="rgba(59,168,245,0.22)" stroke-width="0.8"/>
+                  <polygon points="284,78 312,94 312,126 284,142 256,126 256,94" fill="none" stroke="rgba(59,168,245,0.20)" stroke-width="0.8"/>
+                  <polygon points="340,78 368,94 368,126 340,142 312,126 312,94" fill="none" stroke="rgba(59,168,245,0.18)" stroke-width="0.8"/>
+                  <polygon points="396,78 424,94 424,126 396,142 368,126 368,94" fill="none" stroke="rgba(59,168,245,0.15)" stroke-width="0.8"/>
+                  <polygon points="452,78 480,94 480,126 452,142 424,126 424,94" fill="none" stroke="rgba(59,168,245,0.12)" stroke-width="0.8"/>
+                  <polygon points="508,78 536,94 536,126 508,142 480,126 480,94" fill="none" stroke="rgba(59,168,245,0.09)" stroke-width="0.8"/>
+                  <!-- Row 3 -->
+                  <polygon points="144,126 172,142 172,174 144,190 116,174 116,142" fill="none" stroke="rgba(59,168,245,0.18)" stroke-width="0.8"/>
+                  <polygon points="200,126 228,142 228,174 200,190 172,174 172,142" fill="none" stroke="rgba(59,168,245,0.22)" stroke-width="0.8"/>
+                  <polygon points="256,126 284,142 284,174 256,190 228,174 228,142" fill="none" stroke="rgba(59,168,245,0.22)" stroke-width="0.8"/>
+                  <polygon points="312,126 340,142 340,174 312,190 284,174 284,142" fill="none" stroke="rgba(59,168,245,0.20)" stroke-width="0.8"/>
+                  <polygon points="368,126 396,142 396,174 368,190 340,174 340,142" fill="none" stroke="rgba(59,168,245,0.17)" stroke-width="0.8"/>
+                  <polygon points="424,126 452,142 452,174 424,190 396,174 396,142" fill="none" stroke="rgba(59,168,245,0.14)" stroke-width="0.8"/>
+                  <polygon points="480,126 508,142 508,174 480,190 452,174 452,142" fill="none" stroke="rgba(59,168,245,0.10)" stroke-width="0.8"/>
+                  <!-- Row 4 offset -->
+                  <polygon points="116,174 144,190 144,222 116,238 88,222 88,190" fill="none" stroke="rgba(59,168,245,0.16)" stroke-width="0.8"/>
+                  <polygon points="172,174 200,190 200,222 172,238 144,222 144,190" fill="none" stroke="rgba(59,168,245,0.20)" stroke-width="0.8"/>
+                  <polygon points="228,174 256,190 256,222 228,238 200,222 200,190" fill="none" stroke="rgba(59,168,245,0.22)" stroke-width="0.8"/>
+                  <polygon points="284,174 312,190 312,222 284,238 256,222 256,190" fill="none" stroke="rgba(59,168,245,0.20)" stroke-width="0.8"/>
+                  <polygon points="340,174 368,190 368,222 340,238 312,222 312,190" fill="none" stroke="rgba(59,168,245,0.18)" stroke-width="0.8"/>
+                  <polygon points="396,174 424,190 424,222 396,238 368,222 368,190" fill="none" stroke="rgba(59,168,245,0.15)" stroke-width="0.8"/>
+                  <polygon points="452,174 480,190 480,222 452,238 424,222 424,190" fill="none" stroke="rgba(59,168,245,0.11)" stroke-width="0.8"/>
+                  <!-- Row 5 -->
+                  <polygon points="144,222 172,238 172,270 144,286 116,270 116,238" fill="none" stroke="rgba(59,168,245,0.18)" stroke-width="0.8"/>
+                  <polygon points="200,222 228,238 228,270 200,286 172,270 172,238" fill="none" stroke="rgba(59,168,245,0.20)" stroke-width="0.8"/>
+                  <polygon points="256,222 284,238 284,270 256,286 228,270 228,238" fill="none" stroke="rgba(59,168,245,0.20)" stroke-width="0.8"/>
+                  <polygon points="312,222 340,238 340,270 312,286 284,270 284,238" fill="none" stroke="rgba(59,168,245,0.18)" stroke-width="0.8"/>
+                  <polygon points="368,222 396,238 396,270 368,286 340,270 340,238" fill="none" stroke="rgba(59,168,245,0.15)" stroke-width="0.8"/>
+                  <polygon points="424,222 452,238 452,270 424,286 396,270 396,238" fill="none" stroke="rgba(59,168,245,0.12)" stroke-width="0.8"/>
+                  <!-- Row 6 offset -->
+                  <polygon points="172,270 200,286 200,318 172,334 144,318 144,286" fill="none" stroke="rgba(59,168,245,0.17)" stroke-width="0.8"/>
+                  <polygon points="228,270 256,286 256,318 228,334 200,318 200,286" fill="none" stroke="rgba(59,168,245,0.18)" stroke-width="0.8"/>
+                  <polygon points="284,270 312,286 312,318 284,334 256,318 256,286" fill="none" stroke="rgba(59,168,245,0.16)" stroke-width="0.8"/>
+                  <polygon points="340,270 368,286 368,318 340,334 312,318 312,286" fill="none" stroke="rgba(59,168,245,0.14)" stroke-width="0.8"/>
+                  <polygon points="396,270 424,286 424,318 396,334 368,318 368,286" fill="none" stroke="rgba(59,168,245,0.11)" stroke-width="0.8"/>
+                  <!-- Row 7 -->
+                  <polygon points="200,318 228,334 228,366 200,382 172,366 172,334" fill="none" stroke="rgba(59,168,245,0.14)" stroke-width="0.8"/>
+                  <polygon points="256,318 284,334 284,366 256,382 228,366 228,334" fill="none" stroke="rgba(59,168,245,0.15)" stroke-width="0.8"/>
+                  <polygon points="312,318 340,334 340,366 312,382 284,366 284,334" fill="none" stroke="rgba(59,168,245,0.13)" stroke-width="0.8"/>
+                  <polygon points="368,318 396,334 396,366 368,382 340,366 340,334" fill="none" stroke="rgba(59,168,245,0.10)" stroke-width="0.8"/>
+                </g>
+
+                <!-- Territory zones (colored fill regions) -->
+                <polygon points="116,142 200,94 312,94 340,174 284,238 144,222" fill="url(#zone-a-fill)" stroke="rgba(29,133,242,0.45)" stroke-width="1.4" stroke-linejoin="round" opacity="0.9"/>
+                <polygon points="312,94 424,94 480,190 396,238 340,174" fill="url(#zone-b-fill)" stroke="rgba(59,168,245,0.38)" stroke-width="1.2" stroke-linejoin="round" opacity="0.85"/>
+                <polygon points="284,238 396,238 424,318 312,366 200,318" fill="url(#zone-c-fill)" stroke="rgba(29,133,242,0.40)" stroke-width="1.3" stroke-linejoin="round" opacity="0.85"/>
+                <polygon points="116,238 284,238 200,318 144,318 88,270" fill="url(#zone-d-fill)" stroke="rgba(74,184,247,0.30)" stroke-width="1.0" stroke-linejoin="round" opacity="0.7"/>
+
+                <!-- Route lines between nodes (neon gradient + glow) -->
+                <g stroke-linecap="round" filter="url(#glow-soft)">
+                  <line x1="214" y1="158" x2="336" y2="110" stroke="url(#neon-route-grad)" stroke-width="2.2"/>
+                  <line x1="336" y1="110" x2="370" y2="212" stroke="url(#neon-route-grad)" stroke-width="2.0"/>
+                  <line x1="336" y1="110" x2="430" y2="148" stroke="url(#neon-route-grad-2)" stroke-width="1.8"/>
+                  <line x1="370" y1="212" x2="214" y2="158" stroke="url(#neon-route-grad-2)" stroke-width="1.5"/>
+                  <line x1="214" y1="158" x2="190" y2="268" stroke="url(#neon-route-grad)" stroke-width="1.5"/>
+                  <line x1="190" y1="268" x2="300" y2="306" stroke="url(#neon-route-grad-2)" stroke-width="1.7"/>
+                  <line x1="300" y1="306" x2="370" y2="212" stroke="url(#neon-route-grad)" stroke-width="1.4"/>
+                  <line x1="300" y1="306" x2="350" y2="340" stroke="url(#neon-route-grad-2)" stroke-width="1.2" opacity="0.72"/>
+                  <line x1="430" y1="148" x2="370" y2="212" stroke="url(#neon-route-grad-2)" stroke-width="1.3" opacity="0.78"/>
+                  <line x1="430" y1="148" x2="450" y2="230" stroke="url(#neon-route-grad)" stroke-width="1.1" opacity="0.65"/>
+                </g>
+
+                <!-- Animated route pulses (neon blue + purple data flows) -->
+                <path id="route-p1" d="M214,158 L336,110 L370,212 L190,268 L300,306" fill="none" stroke="none"/>
+                <circle r="3.5" fill="#3ba8f5" opacity="0.92" filter="url(#glow-soft)">
+                  <animateMotion dur="3.6s" repeatCount="indefinite">
+                    <mpath href="#route-p1"/>
+                  </animateMotion>
+                </circle>
+                <circle r="2.5" fill="#9b5de5" opacity="0.88" filter="url(#glow-neon)">
+                  <animateMotion dur="3.6s" begin="1.0s" repeatCount="indefinite">
+                    <mpath href="#route-p1"/>
+                  </animateMotion>
+                </circle>
+                <circle r="1.8" fill="#c084fc" opacity="0.72" filter="url(#glow-soft)">
+                  <animateMotion dur="3.6s" begin="2.2s" repeatCount="indefinite">
+                    <mpath href="#route-p1"/>
+                  </animateMotion>
+                </circle>
+
+                <path id="route-p2" d="M336,110 L430,148 L450,230 L370,212 L300,306 L350,340" fill="none" stroke="none"/>
+                <circle r="3.0" fill="#4ab8f7" opacity="0.88" filter="url(#glow-soft)">
+                  <animateMotion dur="4.6s" begin="0.5s" repeatCount="indefinite">
+                    <mpath href="#route-p2"/>
+                  </animateMotion>
+                </circle>
+                <circle r="2.2" fill="#7c3aed" opacity="0.82" filter="url(#glow-neon)">
+                  <animateMotion dur="4.6s" begin="1.9s" repeatCount="indefinite">
+                    <mpath href="#route-p2"/>
+                  </animateMotion>
+                </circle>
+
+                <path id="route-p3" d="M214,158 L190,268 L300,306 L370,212 L430,148 L336,110" fill="none" stroke="none"/>
+                <circle r="2.8" fill="#b48dff" opacity="0.80" filter="url(#glow-neon)">
+                  <animateMotion dur="5.8s" begin="0.3s" repeatCount="indefinite">
+                    <mpath href="#route-p3"/>
+                  </animateMotion>
+                </circle>
+
+                <!-- Territory zone labels -->
+                <g filter="url(#glow-soft)">
+                  <rect x="148" y="158" width="54" height="20" rx="10" fill="rgba(29,133,242,0.28)" stroke="rgba(59,168,245,0.55)" stroke-width="0.9"/>
+                  <text x="175" y="172" text-anchor="middle" fill="rgba(200,235,255,0.98)" font-size="8.5" font-family="system-ui,sans-serif" font-weight="700" letter-spacing="0.08em">ZONA A</text>
+                </g>
+                <g filter="url(#glow-soft)">
+                  <rect x="374" y="118" width="54" height="20" rx="10" fill="rgba(59,168,245,0.22)" stroke="rgba(59,168,245,0.45)" stroke-width="0.9"/>
+                  <text x="401" y="132" text-anchor="middle" fill="rgba(200,235,255,0.95)" font-size="8.5" font-family="system-ui,sans-serif" font-weight="700" letter-spacing="0.08em">ZONA B</text>
+                </g>
+                <g filter="url(#glow-soft)">
+                  <rect x="334" y="278" width="54" height="20" rx="10" fill="rgba(29,133,242,0.25)" stroke="rgba(59,168,245,0.48)" stroke-width="0.9"/>
+                  <text x="361" y="292" text-anchor="middle" fill="rgba(200,235,255,0.96)" font-size="8.5" font-family="system-ui,sans-serif" font-weight="700" letter-spacing="0.08em">ZONA C</text>
+                </g>
+                <g filter="url(#glow-soft)">
+                  <rect x="118" y="268" width="54" height="20" rx="10" fill="rgba(74,184,247,0.18)" stroke="rgba(59,168,245,0.36)" stroke-width="0.9"/>
+                  <text x="145" y="282" text-anchor="middle" fill="rgba(200,235,255,0.90)" font-size="8.5" font-family="system-ui,sans-serif" font-weight="700" letter-spacing="0.08em">ZONA D</text>
+                </g>
+
+                <!-- Main hub node (brightest — HQ / AI center) -->
+                <circle cx="336" cy="110" r="22" fill="rgba(29,133,242,0.10)" filter="url(#glow-pulse)"/>
+                <circle cx="336" cy="110" r="13" fill="rgba(29,133,242,0.20)"/>
+                <circle cx="336" cy="110" r="7" fill="#1d85f2" filter="url(#glow-strong)"/>
+                <circle cx="336" cy="110" r="3.5" fill="#ffffff"/>
+                <!-- Pulse ring animation (blue + purple rings) -->
+                <circle cx="336" cy="110" r="14" fill="none" stroke="#1d85f2" stroke-width="1.2" opacity="0.6">
+                  <animate attributeName="r" values="14;26;14" dur="2.8s" repeatCount="indefinite"/>
+                  <animate attributeName="opacity" values="0.6;0;0.6" dur="2.8s" repeatCount="indefinite"/>
+                </circle>
+                <circle cx="336" cy="110" r="14" fill="none" stroke="#9b5de5" stroke-width="0.9" opacity="0.45">
+                  <animate attributeName="r" values="14;34;14" dur="2.8s" begin="0.9s" repeatCount="indefinite"/>
+                  <animate attributeName="opacity" values="0.45;0;0.45" dur="2.8s" begin="0.9s" repeatCount="indefinite"/>
+                </circle>
+                <circle cx="336" cy="110" r="14" fill="none" stroke="#3ba8f5" stroke-width="0.7" opacity="0.35">
+                  <animate attributeName="r" values="14;44;14" dur="2.8s" begin="1.6s" repeatCount="indefinite"/>
+                  <animate attributeName="opacity" values="0.35;0;0.35" dur="2.8s" begin="1.6s" repeatCount="indefinite"/>
+                </circle>
+
+                <!-- Secondary nodes -->
+                <circle cx="214" cy="158" r="14" fill="rgba(59,168,245,0.10)" filter="url(#glow-soft)"/>
+                <circle cx="214" cy="158" r="6.5" fill="rgba(59,168,245,0.25)"/>
+                <circle cx="214" cy="158" r="3.5" fill="#4ab8f7" filter="url(#glow-soft)"/>
+
+                <circle cx="430" cy="148" r="11" fill="rgba(59,168,245,0.09)" filter="url(#glow-soft)"/>
+                <circle cx="430" cy="148" r="5" fill="rgba(59,168,245,0.22)"/>
+                <circle cx="430" cy="148" r="2.8" fill="#3ba8f5"/>
+
+                <circle cx="370" cy="212" r="16" fill="rgba(29,133,242,0.11)" filter="url(#glow-soft)"/>
+                <circle cx="370" cy="212" r="7.5" fill="rgba(29,133,242,0.22)"/>
+                <circle cx="370" cy="212" r="4" fill="#1d85f2" filter="url(#glow-soft)"/>
+                <circle cx="370" cy="212" r="1.8" fill="#aaddff"/>
+
+                <circle cx="190" cy="268" r="10" fill="rgba(59,168,245,0.09)"/>
+                <circle cx="190" cy="268" r="4.5" fill="rgba(59,168,245,0.20)"/>
+                <circle cx="190" cy="268" r="2.5" fill="#4ab8f7"/>
+
+                <circle cx="300" cy="306" r="14" fill="rgba(29,133,242,0.10)" filter="url(#glow-soft)"/>
+                <circle cx="300" cy="306" r="6" fill="rgba(29,133,242,0.22)"/>
+                <circle cx="300" cy="306" r="3.2" fill="#1d85f2" filter="url(#glow-soft)"/>
+
+                <circle cx="450" cy="230" r="9" fill="rgba(59,168,245,0.08)"/>
+                <circle cx="450" cy="230" r="4" fill="rgba(59,168,245,0.18)"/>
+                <circle cx="450" cy="230" r="2.2" fill="#3ba8f5"/>
+
+                <circle cx="350" cy="340" r="10" fill="rgba(29,133,242,0.08)"/>
+                <circle cx="350" cy="340" r="4.5" fill="rgba(29,133,242,0.18)"/>
+                <circle cx="350" cy="340" r="2.5" fill="#1d85f2"/>
+
+                <!-- Small client dots scattered (pulsing) -->
+                <g>
+                  <circle cx="168" cy="200" r="2" fill="#5bc8ff" opacity="0.65">
+                    <animate attributeName="r" values="2;3;2" dur="2.4s" begin="0s" repeatCount="indefinite"/>
+                    <animate attributeName="opacity" values="0.65;1;0.65" dur="2.4s" begin="0s" repeatCount="indefinite"/>
+                  </circle>
+                  <circle cx="248" cy="118" r="1.8" fill="#5bc8ff" opacity="0.65">
+                    <animate attributeName="r" values="1.8;2.8;1.8" dur="3.1s" begin="0.5s" repeatCount="indefinite"/>
+                    <animate attributeName="opacity" values="0.65;1;0.65" dur="3.1s" begin="0.5s" repeatCount="indefinite"/>
+                  </circle>
+                  <circle cx="290" cy="168" r="2.2" fill="#c084fc" opacity="0.60">
+                    <animate attributeName="r" values="2.2;3.3;2.2" dur="2.8s" begin="1.0s" repeatCount="indefinite"/>
+                    <animate attributeName="opacity" values="0.60;0.95;0.60" dur="2.8s" begin="1.0s" repeatCount="indefinite"/>
+                  </circle>
+                  <circle cx="258" cy="230" r="1.8" fill="#3ba8f5" opacity="0.65">
+                    <animate attributeName="r" values="1.8;2.6;1.8" dur="2.2s" begin="0.3s" repeatCount="indefinite"/>
+                    <animate attributeName="opacity" values="0.65;1;0.65" dur="2.2s" begin="0.3s" repeatCount="indefinite"/>
+                  </circle>
+                  <circle cx="320" cy="260" r="2" fill="#9b5de5" opacity="0.62">
+                    <animate attributeName="r" values="2;3.1;2" dur="3.4s" begin="1.5s" repeatCount="indefinite"/>
+                    <animate attributeName="opacity" values="0.62;0.95;0.62" dur="3.4s" begin="1.5s" repeatCount="indefinite"/>
+                  </circle>
+                  <circle cx="400" cy="200" r="1.8" fill="#4ab8f7" opacity="0.65">
+                    <animate attributeName="r" values="1.8;2.7;1.8" dur="2.6s" begin="0.7s" repeatCount="indefinite"/>
+                    <animate attributeName="opacity" values="0.65;1;0.65" dur="2.6s" begin="0.7s" repeatCount="indefinite"/>
+                  </circle>
+                  <circle cx="410" cy="270" r="2" fill="#7c3aed" opacity="0.58">
+                    <animate attributeName="r" values="2;3;2" dur="2.9s" begin="1.2s" repeatCount="indefinite"/>
+                    <animate attributeName="opacity" values="0.58;0.90;0.58" dur="2.9s" begin="1.2s" repeatCount="indefinite"/>
+                  </circle>
+                  <circle cx="230" cy="290" r="1.8" fill="#5bc8ff" opacity="0.65">
+                    <animate attributeName="r" values="1.8;2.6;1.8" dur="2.5s" begin="0.4s" repeatCount="indefinite"/>
+                    <animate attributeName="opacity" values="0.65;1;0.65" dur="2.5s" begin="0.4s" repeatCount="indefinite"/>
+                  </circle>
+                  <circle cx="150" cy="310" r="1.6" fill="#4ab8f7" opacity="0.60">
+                    <animate attributeName="r" values="1.6;2.4;1.6" dur="3.0s" begin="0.9s" repeatCount="indefinite"/>
+                    <animate attributeName="opacity" values="0.60;0.95;0.60" dur="3.0s" begin="0.9s" repeatCount="indefinite"/>
+                  </circle>
+                  <circle cx="380" cy="300" r="1.8" fill="#b48dff" opacity="0.62">
+                    <animate attributeName="r" values="1.8;2.7;1.8" dur="2.7s" begin="1.8s" repeatCount="indefinite"/>
+                    <animate attributeName="opacity" values="0.62;0.95;0.62" dur="2.7s" begin="1.8s" repeatCount="indefinite"/>
+                  </circle>
+                  <circle cx="460" cy="180" r="1.6" fill="#5bc8ff" opacity="0.65">
+                    <animate attributeName="r" values="1.6;2.4;1.6" dur="2.3s" begin="0.6s" repeatCount="indefinite"/>
+                    <animate attributeName="opacity" values="0.65;1;0.65" dur="2.3s" begin="0.6s" repeatCount="indefinite"/>
+                  </circle>
+                  <circle cx="270" cy="352" r="1.8" fill="#4ab8f7" opacity="0.65">
+                    <animate attributeName="r" values="1.8;2.6;1.8" dur="3.2s" begin="1.4s" repeatCount="indefinite"/>
+                    <animate attributeName="opacity" values="0.65;1;0.65" dur="3.2s" begin="1.4s" repeatCount="indefinite"/>
+                  </circle>
+                  <circle cx="338" cy="382" r="1.6" fill="#9b5de5" opacity="0.58">
+                    <animate attributeName="r" values="1.6;2.3;1.6" dur="2.8s" begin="2.2s" repeatCount="indefinite"/>
+                    <animate attributeName="opacity" values="0.58;0.90;0.58" dur="2.8s" begin="2.2s" repeatCount="indefinite"/>
+                  </circle>
+                </g>
+
+                <!-- Data readout panel (top-right corner) -->
+                <g transform="translate(396, 32)" opacity="0.88">
+                  <rect width="130" height="52" rx="10" fill="rgba(7,17,40,0.72)" stroke="rgba(59,168,245,0.30)" stroke-width="0.8"/>
+                  <text x="12" y="18" fill="#6ec8f0" font-size="7" font-family="system-ui,sans-serif" font-weight="700" letter-spacing="0.1em">COBERTURA</text>
+                  <text x="12" y="32" fill="#d8f0ff" font-size="14" font-family="system-ui,sans-serif" font-weight="800" letter-spacing="-0.02em">94.7%</text>
+                  <circle cx="100" cy="26" r="11" fill="rgba(29,133,242,0.15)" stroke="rgba(59,168,245,0.3)" stroke-width="0.8"/>
+                  <path d="M100,18 a8,8 0 0,1 0,16" fill="none" stroke="#1d85f2" stroke-width="2" stroke-linecap="round"/>
+                  <text x="12" y="47" fill="#4d7a9a" font-size="6.5" font-family="system-ui,sans-serif">4 zonas ativas · 3 rotas otimizadas</text>
+                </g>
+
+                <!-- Status badge bottom-left -->
+                <g transform="translate(52, 390)" opacity="0.82">
+                  <rect width="110" height="34" rx="8" fill="rgba(7,17,40,0.70)" stroke="rgba(59,168,245,0.25)" stroke-width="0.8"/>
+                  <circle cx="16" cy="17" r="4" fill="#1d85f2">
+                    <animate attributeName="opacity" values="1;0.3;1" dur="2s" repeatCount="indefinite"/>
+                  </circle>
+                  <text x="26" y="14" fill="#6ec8f0" font-size="6.5" font-family="system-ui,sans-serif" font-weight="700" letter-spacing="0.08em">IA ATIVA</text>
+                  <text x="26" y="26" fill="#8cb8d0" font-size="6" font-family="system-ui,sans-serif">balanceando rotas...</text>
+                </g>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section benefits-section" id="beneficios">
+        <div class="container">
+          <div class="section-heading reveal">
+            <span class="eyebrow eyebrow-dark">Por que lideres escolhem ROUTflex</span>
+            <h2>Elimine ineficiencias. Escale com controle.</h2>
+            <p>Do planejamento a execucao — o ROUTflex entrega visibilidade total, automacao inteligente e decisoes mais rapidas para operacoes que nao toleram imprecisao.</p>
+          </div>
+          <div class="benefits-grid">
+
+            <article class="benefit-card reveal">
+              <div class="benefit-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M13 2L4.5 13.5H11L10 22L20.5 10.5H14L13 2Z"/>
+                </svg>
+              </div>
+              <div class="benefit-body">
+                <span class="benefit-number">01</span>
+                <h3>Planejamento em minutos, nao horas</h3>
+                <p>Redistribua clientes, reequilibre territorios e gere rotas otimizadas em segundos. Fim do trabalho manual.</p>
+              </div>
+            </article>
+
+            <article class="benefit-card reveal">
+              <div class="benefit-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="2" y="3" width="20" height="13" rx="2"/>
+                  <polyline points="8,21 12,17 16,21"/>
+                  <line x1="12" y1="17" x2="12" y2="16"/>
+                  <polyline points="5,10 8,7 11,10 14,6 18,9"/>
+                </svg>
+              </div>
+              <div class="benefit-body">
+                <span class="benefit-number">02</span>
+                <h3>Visibilidade operacional completa</h3>
+                <p>Cobertura, desempenho e equilibrio territorial em tempo real — sem planilhas, sem suposicoes.</p>
+              </div>
+            </article>
+
+            <article class="benefit-card reveal">
+              <div class="benefit-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="4.5" r="2.5"/>
+                  <circle cx="4.5" cy="18" r="2.5"/>
+                  <circle cx="19.5" cy="18" r="2.5"/>
+                  <line x1="12" y1="7" x2="4.5" y2="15.5"/>
+                  <line x1="12" y1="7" x2="19.5" y2="15.5"/>
+                  <line x1="7" y1="18" x2="17" y2="18"/>
+                </svg>
+              </div>
+              <div class="benefit-body">
+                <span class="benefit-number">03</span>
+                <h3>Execucao consistente em escala</h3>
+                <p>Unifique estrategia, rotina comercial e acompanhamento de campo em uma unica plataforma de controle.</p>
+              </div>
+            </article>
+
+          </div>
+        </div>
+      </section>
+
+      <section class="section features-section" id="funcionalidades">
+        <div class="container">
+          <div class="section-heading reveal">
+            <span class="eyebrow eyebrow-dark">Plataforma</span>
+            <h2>Cada recurso foi projetado para resultados operacionais reais.</h2>
+            <p>Da distribuicao territorial a torre de controle — tudo integrado, tudo inteligente.</p>
+          </div>
+          <div class="feature-grid">
+
+            <article class="feature-block feature-block-text reveal">
+              <div class="feature-copy">
+                <span class="feature-label">Balanceamento com IA</span>
+                <h3>Rotas otimizadas automaticamente. Zero ajuste manual.</h3>
+                <p>O ROUTflex recalcula territorios e redistribui clientes com IA — reduzindo tempo operacional e eliminando desequilibrios de carga.</p>
+              </div>
+            </article>
+
+            <article class="feature-block feature-block-video reveal">
+              <div class="media-frame media-frame-video">
+                <div class="video-chrome" aria-hidden="true">
+                  <div class="video-chrome-dots">
+                    <span class="video-chrome-dot"></span>
+                    <span class="video-chrome-dot"></span>
+                    <span class="video-chrome-dot"></span>
+                  </div>
+                  <div class="video-chrome-url">
+                    <span>app.routflex.com.br &mdash; Balanceamento com IA</span>
+                  </div>
+                </div>
+                <video autoplay muted loop playsinline preload="metadata" aria-label="Demonstracao do balanceamento com IA">
+                  <source src="assets/ai-balancear.mp4" type="video/mp4">
+                </video>
+              </div>
+            </article>
+
+            <article class="feature-block reveal">
+              <div class="feature-copy">
+                <span class="feature-label">CRM &amp; Dashboards</span>
+                <h3>Painel unico. Controle total.</h3>
+                <p>KPIs, desempenho de equipes e distribuicao territorial consolidados em dashboards de alta clareza e precisao.</p>
+              </div>
+              <div class="feature-media">
+                <div class="media-frame">
+                  <img src="assets/crm.png" alt="Dashboard CRM do ROUTflex" loading="lazy">
+                </div>
+              </div>
+            </article>
+
+            <article class="feature-block reveal">
+              <div class="feature-copy">
+                <span class="feature-label">Divisao Territorial</span>
+                <h3>Territorios inteligentes, cobertura garantida.</h3>
+                <p>Redistribua regioes de forma automatizada — com equilibrio de carga, maxima cobertura e zero sobreposicao.</p>
+              </div>
+              <div class="feature-media">
+                <div class="media-frame">
+                  <img class="img-divisao" src="assets/divisao-territorial.png" alt="Mapa de divisao territorial no ROUTflex" loading="lazy">
+                </div>
+              </div>
+            </article>
+
+            <article class="feature-block reveal">
+              <div class="feature-copy">
+                <span class="feature-label">Modo Operacional</span>
+                <h3>Otimize rotas em segundos com inteligencia em tempo real.</h3>
+                <p>Ajuste dias, ciclos e prioridades sob demanda — ou deixe a IA recalcular a rota mais eficiente automaticamente.</p>
+              </div>
+              <div class="feature-media">
+                <div class="opmode-mock" id="opmodeMock" aria-hidden="true">
+                  <div class="opmode-chrome">
+                    <div class="opmode-chrome-dots"><span></span><span></span><span></span></div>
+                    <span class="opmode-url">app.routflex.com.br &mdash; Modo Operacional</span>
+                  </div>
+                  <div class="opmode-body">
+
+                    <div class="opmode-topbar">
+                      <div class="opmode-ai-status">
+                        <span class="opmode-ai-dot"></span>
+                        IA assistindo
+                      </div>
+                      <div class="opmode-update-tag" id="opmodeTag">
+                        <span class="opmode-tag-dot"></span>
+                        Rota atualizada
+                      </div>
+                    </div>
+
+                    <div class="opmode-rep">
+                      <div class="opmode-avatar">JM</div>
+                      <div class="opmode-rep-info">
+                        <strong>Jo&atilde;o Matos</strong>
+                        <span>Zona A &bull; 14 clientes</span>
+                      </div>
+                      <div class="opmode-kpi">
+                        <strong id="opmodeCovPct">87%</strong>
+                        <span>cobertura</span>
+                      </div>
+                    </div>
+
+                    <div class="opmode-label">Dia da visita</div>
+                    <div class="opmode-days" id="opmodeDays">
+                      <button class="opmode-btn opmode-day-btn" tabindex="-1">Dom</button>
+                      <button class="opmode-btn opmode-day-btn" tabindex="-1">Seg</button>
+                      <button class="opmode-btn opmode-day-btn" tabindex="-1">Ter</button>
+                      <button class="opmode-btn opmode-day-btn" tabindex="-1">Qua</button>
+                      <button class="opmode-btn opmode-day-btn" tabindex="-1">Qui</button>
+                      <button class="opmode-btn opmode-day-btn" tabindex="-1">Sex</button>
+                      <button class="opmode-btn opmode-day-btn" tabindex="-1">S&aacute;b</button>
+                    </div>
+
+                    <div class="opmode-label">Ciclo</div>
+                    <div class="opmode-cycles" id="opmodeCycles">
+                      <button class="opmode-btn opmode-cycle-btn" tabindex="-1">S1</button>
+                      <button class="opmode-btn opmode-cycle-btn" tabindex="-1">S2</button>
+                      <button class="opmode-btn opmode-cycle-btn" tabindex="-1">S3</button>
+                      <button class="opmode-btn opmode-cycle-btn" tabindex="-1">S4</button>
+                      <button class="opmode-btn opmode-cycle-btn" tabindex="-1">S5</button>
+                      <button class="opmode-btn opmode-cycle-btn" tabindex="-1">S6</button>
+                      <button class="opmode-btn opmode-cycle-btn" tabindex="-1">S7</button>
+                      <button class="opmode-btn opmode-cycle-btn" tabindex="-1">S8</button>
+                    </div>
+
+                    <div class="opmode-route-wrap">
+                      <svg class="opmode-route-svg" viewBox="0 0 280 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                          <linearGradient id="opGrad" x1="0" y1="0" x2="280" y2="0" gradientUnits="userSpaceOnUse">
+                            <stop offset="0%" stop-color="#1d85f2"/>
+                            <stop offset="100%" stop-color="#9b5de5"/>
+                          </linearGradient>
+                          <filter id="opGlow" x="-80%" y="-80%" width="260%" height="260%">
+                            <feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="blur"/>
+                            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                          </filter>
+                        </defs>
+                        <path class="op-route" id="opR0" d="M20,42 C50,42 50,22 80,22 C110,22 110,38 150,38 C190,38 190,18 218,18 C236,18 252,24 260,30"/>
+                        <path class="op-route" id="opR1" d="M20,42 C50,42 50,54 80,54 C110,54 110,28 150,28 C190,28 190,50 218,50 C238,50 252,38 260,20"/>
+                        <path class="op-route" id="opR2" d="M20,42 C48,42 56,18 80,18 C104,18 116,48 150,48 C184,48 188,22 218,22 C238,22 254,30 260,36"/>
+                        <path class="op-route" id="opR3" d="M20,42 C52,42 52,36 80,36 C108,36 112,14 150,14 C188,14 190,40 218,40 C238,40 254,26 260,24"/>
+                        <path class="op-route" id="opR4" d="M20,42 C50,42 56,48 80,48 C104,48 116,24 150,24 C184,24 190,46 218,46 C240,46 255,30 260,16"/>
+                        <circle cx="20"  cy="42" r="4.5" fill="#1d85f2" filter="url(#opGlow)"/>
+                        <circle cx="80"  cy="36" r="3.5" fill="#3ba8f5"/>
+                        <circle cx="150" cy="32" r="4"   fill="#9b5de5" filter="url(#opGlow)"/>
+                        <circle cx="218" cy="34" r="3.5" fill="#3ba8f5"/>
+                        <circle cx="260" cy="26" r="4"   fill="#1d85f2" filter="url(#opGlow)"/>
+                        <text x="20"  y="59" text-anchor="middle" fill="#3a6880" font-size="6.5" font-family="system-ui,sans-serif" font-weight="600">HQ</text>
+                        <text x="80"  y="51" text-anchor="middle" fill="#3a6880" font-size="6.5" font-family="system-ui,sans-serif" font-weight="600">C01</text>
+                        <text x="150" y="56" text-anchor="middle" fill="#3a6880" font-size="6.5" font-family="system-ui,sans-serif" font-weight="600">C02</text>
+                        <text x="218" y="52" text-anchor="middle" fill="#3a6880" font-size="6.5" font-family="system-ui,sans-serif" font-weight="600">C03</text>
+                        <text x="260" y="44" text-anchor="middle" fill="#3a6880" font-size="6.5" font-family="system-ui,sans-serif" font-weight="600">C04</text>
+                        <circle r="2.8" fill="#6ed4ff" filter="url(#opGlow)">
+                          <animateMotion id="opTracerAnim" dur="2.4s" repeatCount="indefinite"
+                            path="M20,42 C50,42 50,22 80,22 C110,22 110,38 150,38 C190,38 190,18 218,18 C236,18 252,24 260,30"/>
+                        </circle>
+                      </svg>
+                    </div>
+
+                    <button class="opmode-ai-btn" tabindex="-1">
+                      <svg width="9" height="9" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2L4.5 13.5H11L10 22L20.5 10.5H14L13 2Z" fill="currentColor"/></svg>
+                      Recalcular com IA
+                    </button>
+
+                  </div>
+                </div>
+              </div>
+            </article>
+
+            <article class="feature-block feature-block-dark reveal">
+              <div class="feature-copy">
+                <span class="feature-label">Torre de Controle</span>
+                <h3>Decisoes estrategicas com dados precisos.</h3>
+                <p>Acesse analises profundas, metricas criticas e alertas operacionais — diretamente no painel central, sem fricao.</p>
+                  <ul class="torre-stats" aria-label="Indicadores da torre de controle">
+                  <li><strong>KPIs</strong><span>em tempo real</span></li>
+                  <li><strong>Equipes</strong><span>por performance</span></li>
+                  <li><strong>Cobertura</strong><span>por regiao</span></li>
+                </ul>
+              </div>
+              <div class="feature-media">
+                <div class="media-frame media-frame-torre">
+                  <img src="assets/torre.png" alt="Painel torre de controle do ROUTflex" loading="lazy">
+                </div>
+              </div>
+            </article>
+
+          </div>
+        </div>
+      </section>
+
+      <section class="cta-section" aria-label="Chamada para acao">
+        <div class="container">
+          <div class="cta-panel reveal">
+            <div class="cta-copy">
+              <span class="eyebrow eyebrow-light">Pronto para operar com precisao?</span>
+              <h2>Veja o ROUTflex em acao — construido para operacoes que exigem mais.</h2>
+              <p>Agende uma demonstracao e descubra como empresas de alta performance estao otimizando territorios, reduzindo custos operacionais e escalando com controle total.</p>
+            </div>
+            <div class="cta-actions">
+              <a class="button button-primary" href="#contato">Agendar demonstracao</a>
+              <a class="button button-ghost" href="#contato">Falar com especialista</a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section contact-section" id="contato">
+        <div class="container contact-grid">
+          <div class="contact-copy reveal">
+            <span class="eyebrow eyebrow-dark">Fale com um especialista</span>
+            <h2>Pronto para transformar sua operacao?</h2>
+            <p>Mostre como funciona sua operacao e receba uma demonstracao personalizada. Nosso time responde em menos de 24 horas.</p>
+            <div class="contact-points">
+              <div class="contact-point">
+                <span>E-mail</span>
+                <strong>contato@routflex.com.br</strong>
+              </div>
+              <div class="contact-point">
+                <span>Atendimento Corporativo</span>
+                <strong><a href="tel:08000000000" class="contact-phone">0800 000 0000</a></strong>
+              </div>
+              <div class="contact-point">
+                <span>Horario</span>
+                <strong>Seg – Sex, 08h – 18h</strong>
+              </div>
+            </div>
+          </div>
+          <form class="contact-form reveal" novalidate>
+            <div class="form-row">
+              <label for="nome">Nome</label>
+              <input id="nome" name="nome" type="text" placeholder="Seu nome" required autocomplete="name">
+            </div>
+            <div class="form-row">
+              <label for="empresa">Empresa</label>
+              <input id="empresa" name="empresa" type="text" placeholder="Nome da empresa" required autocomplete="organization">
+            </div>
+            <div class="form-row">
+              <label for="telefone">Telefone</label>
+              <input id="telefone" name="telefone" type="tel" placeholder="(00) 00000-0000" required autocomplete="tel">
+            </div>
+            <div class="form-row">
+              <label for="email">E-mail</label>
+              <input id="email" name="email" type="email" placeholder="voce@empresa.com" required autocomplete="email">
+            </div>
+            <div class="form-row">
+              <label for="mensagem">Mensagem</label>
+              <textarea id="mensagem" name="mensagem" rows="4" placeholder="Descreva brevemente sua operacao de campo."></textarea>
+            </div>
+            <button class="button button-primary form-button" type="submit">Agendar demonstracao</button>
+            <p class="form-feedback" aria-live="polite" role="status"></p>
+          </form>
+        </div>
+      </section>
+
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="footer-grid">
+
+          <div class="footer-col footer-col-brand">
+            <a class="footer-logo-link" href="#topo" aria-label="ROUTflex topo">
+              <img src="assets/logo.png" alt="ROUTflex" width="32" height="32">
+              <strong><span class="brand-rout">ROUT</span><span class="brand-flex">flex</span></strong>
+            </a>
+            <p class="footer-desc">Plataforma enterprise de roteirizacao inteligente e gestao territorial para operacoes externas de alta performance.</p>
+            <div class="footer-legal">
+              <span>ROUTflex Tecnologia para Operacoes Ltda.</span>
+              <span>CNPJ: 00.000.000/0001-00</span>
+              <span>Av. das Nacoes Unidas, 1000 - Cuiaba/MT</span>
+            </div>
+          </div>
+
+          <div class="footer-col">
+            <strong class="footer-col-title">Produto</strong>
+            <nav class="footer-nav" aria-label="Links do produto">
+              <a href="#beneficios">Resultados</a>
+              <a href="#funcionalidades">Plataforma</a>
+              <a href="#contato">Agendar demonstracao</a>
+            </nav>
+          </div>
+
+          <div class="footer-col">
+            <strong class="footer-col-title">Fale conosco</strong>
+            <div class="footer-contact-list">
+              <a href="mailto:contato@routflex.com.br">contato@routflex.com.br</a>
+              <a href="tel:08000000000" class="footer-phone">0800 000 0000</a>
+              <span class="footer-phone-label">Atendimento Corporativo</span>
+            </div>
+            <div class="social-links" aria-label="Redes sociais">
+              <a class="social-link" href="tel:08000000000" aria-label="Telefone ROUTflex">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M19.05 4.94A9.86 9.86 0 0 0 12.02 2C6.58 2 2.16 6.42 2.16 11.86c0 1.74.46 3.44 1.33 4.94L2 22l5.35-1.4a9.82 9.82 0 0 0 4.67 1.19h.01c5.44 0 9.86-4.42 9.86-9.86 0-2.63-1.02-5.1-2.84-6.99Zm-7.03 15.18h-.01a8.14 8.14 0 0 1-4.15-1.13l-.3-.18-3.18.83.85-3.1-.2-.32a8.16 8.16 0 0 1-1.25-4.35c0-4.48 3.65-8.13 8.15-8.13 2.18 0 4.23.85 5.76 2.39a8.08 8.08 0 0 1 2.37 5.75c0 4.49-3.65 8.14-8.04 8.14Zm4.47-6.08c-.24-.12-1.43-.7-1.65-.78-.22-.08-.38-.12-.54.12-.16.24-.62.78-.76.94-.14.16-.28.18-.52.06-.24-.12-1-.37-1.9-1.17-.7-.63-1.17-1.4-1.31-1.64-.14-.24-.01-.37.1-.49.11-.11.24-.28.36-.42.12-.14.16-.24.24-.4.08-.16.04-.3-.02-.42-.06-.12-.54-1.3-.74-1.78-.2-.48-.4-.42-.54-.43h-.46c-.16 0-.42.06-.64.3-.22.24-.84.82-.84 2s.86 2.32.98 2.48c.12.16 1.68 2.56 4.07 3.59.57.24 1.01.38 1.35.48.57.18 1.09.16 1.5.1.46-.07 1.43-.58 1.63-1.14.2-.56.2-1.04.14-1.14-.06-.1-.22-.16-.46-.28Z"/></svg>
+              </a>
+              <a class="social-link" href="https://www.instagram.com/routflex/" target="_blank" rel="noreferrer noopener" aria-label="Instagram ROUTflex">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5Zm0 2.2A2.8 2.8 0 0 0 4.2 7v10A2.8 2.8 0 0 0 7 19.8h10a2.8 2.8 0 0 0 2.8-2.8V7A2.8 2.8 0 0 0 17 4.2H7Zm10.15 1.65a1.2 1.2 0 1 1 0 2.4 1.2 1.2 0 0 1 0-2.4ZM12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10Zm0 2.2a2.8 2.8 0 1 0 0 5.6 2.8 2.8 0 0 0 0-5.6Z"/></svg>
+              </a>
+              <a class="social-link" href="https://www.linkedin.com/in/phillips-mijares-a50454176/" target="_blank" rel="noreferrer noopener" aria-label="LinkedIn ROUTflex">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6.94 8.5H3.56V20h3.38V8.5ZM5.25 3A1.97 1.97 0 1 0 5.3 6.94 1.97 1.97 0 0 0 5.25 3ZM20.44 12.72c0-3.42-1.83-5.01-4.28-5.01-1.97 0-2.85 1.08-3.34 1.84V8.5H9.44V20h3.38v-6.4c0-1.69.32-3.32 2.42-3.32 2.08 0 2.11 1.95 2.11 3.43V20h3.39l-.3-7.28Z"/></svg>
+              </a>
+            </div>
+          </div>
+
+        </div>
+        <div class="footer-bottom">
+          <span>2026 ROUTflex Tecnologia para Operacoes Ltda. Todos os direitos reservados.</span>
+        </div>
+      </div>
+    </footer>
+
+  </div>
+
+  <div class="chat-widget" id="chatWidget">
+    <button class="chat-trigger" id="chatTrigger" aria-label="Abrir assistente de IA ROUTflex" aria-expanded="false" aria-controls="chatWindow">
+      <svg class="icon-chat" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M13 2 L5 13 H11 L10 22 L19 11 H13 Z"/>
+      </svg>
+      <svg class="icon-close" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+      </svg>
+    </button>
+    <div class="chat-window" id="chatWindow" role="dialog" aria-modal="true" aria-label="Assistente de IA ROUTflex" hidden>
+      <div class="chat-header">
+        <div class="chat-avatar" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M12 3L20 7.5V16.5L12 21L4 16.5V7.5Z"/><circle cx="12" cy="12" r="3"/></svg>
+        </div>
+        <div class="chat-header-info">
+          <strong>ROUTflex AI</strong>
+          <span class="chat-status"><em class="status-dot"></em>IA ativa · Analisando dados</span>
+        </div>
+        <button class="chat-close-btn" id="chatCloseBtn" aria-label="Fechar assistente">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </div>
+      <div class="chat-messages" id="chatMessages" role="log" aria-live="polite" aria-label="Conversa"></div>
+      <div class="chat-chips" id="chatChips" aria-label="Sugestoes rapidas">
+        <button class="chip" data-query="como funciona">Como funciona</button>
+        <button class="chip" data-query="demonstracao">Agendar demo</button>
+        <button class="chip" data-query="funcionalidades">Ver plataforma</button>
+        <button class="chip" data-query="contato">Falar com especialista</button>
+      </div>
+      <form class="chat-input-row" id="chatForm" autocomplete="off">
+        <input class="chat-input" id="chatInput" type="text" placeholder="Escreva sua duvida..." aria-label="Sua mensagem" maxlength="200">
+        <button class="chat-send" type="submit" aria-label="Enviar mensagem">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M2.01 21 23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Custom cursor layers — pointer-events:none, moved via JS transform -->
+  <div id="rfxCursorDot"  aria-hidden="true"></div>
+  <div id="rfxCursorRing" aria-hidden="true"></div>
+
+  <script src="script.js"></script>
+</body>
+</html>
