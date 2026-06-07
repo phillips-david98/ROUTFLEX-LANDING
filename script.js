@@ -3,215 +3,310 @@
    ============================================= */
 
 /* =============================================
-   HERO CANVAS — Neon network + data streams
+   HERO CANVAS — Operational route layer
    =============================================
-   Organic drifting nodes linked by neon
-   blue→purple gradient lines. Flow particles
-   simulate real-time data processing.
-   Runs only while the hero is in the viewport.
+   Minimal route mesh inspired by ROUTflex Planning:
+   planned stops, field execution paths and subtle
+   operational movement. Runs only while visible.
    ============================================= */
 (function initHeroCanvas() {
   const canvas = document.getElementById("heroCanvas");
   if (!canvas) return;
-  // desynchronized: true lets the browser schedule compositing independently → smoother
   const ctx = canvas.getContext("2d", { alpha: true, desynchronized: true });
 
-  // ─── Tuning constants ────────────────────────────────────────────────────
-  // 36 nodes (was 55): O(n²) link loop drops from ~1 485 to ~630 pairs/frame
-  const NODE_COUNT   = 36;
-  const LINK_DIST    = 118;
-  const LINK_DIST_SQ = LINK_DIST * LINK_DIST;   // pre-computed — skip sqrt on misses
-  const PULSE_NODES  = [3, 14, 26];              // was 5 — 3 radial gradients/frame
-  const FLOW_COUNT   = 5;                        // was 7
-  // ─────────────────────────────────────────────────────────────────────────
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const dpr = Math.min(window.devicePixelRatio || 1, 1.75);
+  const nodeModel = [
+    { id: "A", x: 0.12, y: 0.30, pulse: 0.2, tier: "primary", color: "82, 196, 255" },
+    { id: "B", x: 0.28, y: 0.22, pulse: 1.7, tier: "secondary" },
+    { id: "C", x: 0.43, y: 0.39, pulse: 2.9, tier: "primary", color: "154, 226, 255" },
+    { id: "D", x: 0.62, y: 0.27, pulse: 4.2, tier: "secondary", color: "112, 181, 224" },
+    { id: "E", x: 0.78, y: 0.46, pulse: 5.6, tier: "secondary" },
+    { id: "F", x: 0.56, y: 0.66, pulse: 6.8, tier: "primary", color: "99, 205, 255" },
+    { id: "G", x: 0.34, y: 0.73, pulse: 8.1, tier: "secondary" },
+    { id: "H", x: 0.84, y: 0.72, pulse: 9.3, tier: "secondary", color: "132, 172, 202" },
+  ];
+  const routeModel = [
+    { from: 0, to: 1 },
+    { from: 1, to: 2 },
+    { from: 2, to: 3 },
+    { from: 3, to: 4 },
+    { from: 2, to: 5 },
+    { from: 5, to: 6 },
+    { from: 5, to: 7 },
+  ];
+  const particles = [
+    { route: 0, t: 0.12, speed: 0.000045, delay: 0 },
+    { route: 1, t: 0.68, speed: 0.000035, delay: 260 },
+    { route: 2, t: 0.56, speed: 0.000037, delay: 520 },
+    { route: 3, t: 0.18, speed: 0.000030, delay: 820 },
+    { route: 4, t: 0.24, speed: 0.000041, delay: 1080 },
+    { route: 5, t: 0.40, speed: 0.000032, delay: 1320 },
+    { route: 6, t: 0.70, speed: 0.000033, delay: 1600 },
+  ];
+  const ambientParticles = [
+    { x: 0.18, y: 0.18, driftX: 0.000006, driftY: 0.000004, size: 1.0, phase: 0.3 },
+    { x: 0.36, y: 0.16, driftX: -0.000004, driftY: 0.000005, size: 0.9, phase: 1.8 },
+    { x: 0.52, y: 0.21, driftX: 0.000005, driftY: -0.000003, size: 1.1, phase: 2.6 },
+    { x: 0.72, y: 0.19, driftX: -0.000006, driftY: 0.000004, size: 0.95, phase: 4.1 },
+    { x: 0.88, y: 0.34, driftX: -0.000004, driftY: -0.000004, size: 1.0, phase: 5.2 },
+    { x: 0.20, y: 0.56, driftX: 0.000005, driftY: -0.000005, size: 0.85, phase: 3.4 },
+    { x: 0.46, y: 0.58, driftX: -0.000005, driftY: 0.000003, size: 0.95, phase: 0.9 },
+    { x: 0.68, y: 0.62, driftX: 0.000004, driftY: 0.000005, size: 1.05, phase: 2.1 },
+    { x: 0.81, y: 0.82, driftX: -0.000005, driftY: -0.000003, size: 0.9, phase: 4.7 },
+    { x: 0.30, y: 0.86, driftX: 0.000004, driftY: -0.000004, size: 1.0, phase: 5.9 },
+    { x: 0.08, y: 0.42, driftX: 0.000003, driftY: 0.000005, size: 0.72, phase: 1.2 },
+    { x: 0.13, y: 0.76, driftX: -0.000004, driftY: -0.000002, size: 0.82, phase: 2.8 },
+    { x: 0.25, y: 0.38, driftX: 0.000005, driftY: 0.000002, size: 0.78, phase: 4.5 },
+    { x: 0.33, y: 0.52, driftX: -0.000003, driftY: 0.000004, size: 0.70, phase: 0.5 },
+    { x: 0.40, y: 0.29, driftX: 0.000004, driftY: -0.000003, size: 0.86, phase: 3.7 },
+    { x: 0.49, y: 0.78, driftX: -0.000005, driftY: 0.000002, size: 0.76, phase: 5.5 },
+    { x: 0.58, y: 0.12, driftX: 0.000003, driftY: 0.000004, size: 0.74, phase: 1.5 },
+    { x: 0.61, y: 0.47, driftX: -0.000004, driftY: -0.000003, size: 0.84, phase: 2.3 },
+    { x: 0.66, y: 0.86, driftX: 0.000004, driftY: -0.000002, size: 0.68, phase: 4.9 },
+    { x: 0.74, y: 0.36, driftX: -0.000003, driftY: 0.000005, size: 0.80, phase: 0.1 },
+    { x: 0.79, y: 0.56, driftX: 0.000005, driftY: 0.000002, size: 0.72, phase: 3.2 },
+    { x: 0.87, y: 0.14, driftX: -0.000004, driftY: 0.000003, size: 0.78, phase: 5.0 },
+    { x: 0.91, y: 0.64, driftX: -0.000003, driftY: -0.000004, size: 0.88, phase: 2.0 },
+    { x: 0.44, y: 0.91, driftX: 0.000003, driftY: -0.000005, size: 0.74, phase: 1.0 },
+    { x: 0.54, y: 0.35, driftX: -0.000005, driftY: 0.000003, size: 0.70, phase: 4.0 },
+    { x: 0.70, y: 0.73, driftX: 0.000004, driftY: -0.000003, size: 0.82, phase: 5.8 },
+    { x: 0.94, y: 0.45, driftX: -0.000005, driftY: 0.000002, size: 0.76, phase: 3.9 },
+  ];
+  const softBursts = [
+    { x: 0.22, y: 0.30, delay: 700, period: 7600, phase: 0 },
+    { x: 0.49, y: 0.48, delay: 3200, period: 9800, phase: 0 },
+    { x: 0.76, y: 0.60, delay: 5400, period: 11200, phase: 0 },
+    { x: 0.62, y: 0.24, delay: 8200, period: 12400, phase: 0 },
+  ];
 
-  let W, H, nodes, flowParticles, animId, active = true;
+  let cssW = 0, cssH = 0, nodes = [], routes = [], animId, lastTs = 0, active = true;
 
   function resize() {
     const rect = canvas.getBoundingClientRect();
-    W = canvas.width  = rect.width;
-    H = canvas.height = rect.height;
+    cssW = rect.width;
+    cssH = rect.height;
+    canvas.width = Math.max(1, Math.round(cssW * dpr));
+    canvas.height = Math.max(1, Math.round(cssH * dpr));
+    canvas.style.width = `${cssW}px`;
+    canvas.style.height = `${cssH}px`;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    buildRoutes();
   }
 
-  function mkNode() {
-    const x   = Math.random() * W;
-    const y   = Math.random() * H;
-    const bx  = x * 0.55 + W * 0.28;
-    const rnd = Math.random();
-    // 0 = slow (35%) | 1 = medium (50%) | 2 = drift (15%)
-    const tier       = rnd < 0.35 ? 0 : rnd < 0.85 ? 1 : 2;
-    const speedScale = [0.06,  0.12,  0.18][tier];   // calmer than before
-    const maxSpeed   = [0.10,  0.16,  0.22][tier];
-    const sineAmp    = tier === 0
-      ? 0.0014 + Math.random() * 0.0018
-      : tier === 1
-        ? 0.0032 + Math.random() * 0.0032
-        : 0.0024 + Math.random() * 0.0028;
-    const sineFreq   = tier === 0
-      ? 0.00008 + Math.random() * 0.00010
-      : tier === 1
-        ? 0.00014 + Math.random() * 0.00014
-        : 0.00020 + Math.random() * 0.00012;
+  function buildRoutes() {
+    if (cssW < 2 || cssH < 2) {
+      nodes = [];
+      routes = [];
+      return;
+    }
+
+    nodes = nodeModel.map(node => ({
+      ...node,
+      x: node.x * cssW,
+      y: node.y * cssH,
+    }));
+    routes = routeModel.map(route => {
+      const a = nodes[route.from];
+      const b = nodes[route.to];
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const length = Math.hypot(dx, dy);
+      const bend = Math.min(42, length * 0.18);
+      const normal = { x: -dy / length, y: dx / length };
+      const sign = route.from % 2 === 0 ? 1 : -1;
+      return {
+        a,
+        b,
+        c: {
+          x: (a.x + b.x) * 0.5 + normal.x * bend * sign,
+          y: (a.y + b.y) * 0.5 + normal.y * bend * sign,
+        },
+      };
+    });
+  }
+
+  function pointOnRoute(route, t) {
+    const inv = 1 - t;
     return {
-      x: bx < W ? bx : x, y,
-      vx: (Math.random() - 0.5) * speedScale,
-      vy: (Math.random() - 0.5) * speedScale,
-      r:   1.4 + Math.random() * 2.2,
-      alpha: 0.35 + Math.random() * 0.50,
-      phase: Math.random() * Math.PI * 2,
-      sineFreq, sineAmp, maxSpeed,
+      x: inv * inv * route.a.x + 2 * inv * t * route.c.x + t * t * route.b.x,
+      y: inv * inv * route.a.y + 2 * inv * t * route.c.y + t * t * route.b.y,
     };
   }
 
-  function mkFlow() {
-    return {
-      x: -30, y: H * 0.15 + Math.random() * H * 0.65,
-      vx: 0.16 + Math.random() * 0.28,   // 0.16–0.44 (was 0.20–0.56)
-      vy: (Math.random() - 0.5) * 0.10,
-      r:   0.80 + Math.random() * 0.72,
-      life: Math.random() * 180,
-      maxLife: 290 + Math.random() * 180,
-      isBlue: Math.random() > 0.40,
-    };
+  function drawRoute(route, alpha, width) {
+    ctx.beginPath();
+    ctx.moveTo(route.a.x, route.a.y);
+    ctx.quadraticCurveTo(route.c.x, route.c.y, route.b.x, route.b.y);
+    ctx.strokeStyle = `rgba(94, 188, 246, ${alpha})`;
+    ctx.lineWidth = width;
+    ctx.lineCap = "round";
+    ctx.stroke();
   }
 
-  function init() {
-    resize();
-    nodes         = Array.from({ length: NODE_COUNT }, mkNode);
-    flowParticles = Array.from({ length: FLOW_COUNT }, mkFlow);
-  }
-
-  function draw(ts) {
+  function draw(ts = 0) {
     if (!active) return;
-    ctx.clearRect(0, 0, W, H);
-
-    // ── 1. Node physics ──────────────────────────────────────────────────
-    for (let k = 0; k < nodes.length; k++) {
-      const n = nodes[k];
-      n.vx += Math.sin(ts * n.sineFreq + n.phase)        * n.sineAmp;
-      n.vy += Math.cos(ts * n.sineFreq * 1.37 + n.phase) * n.sineAmp;
-      const spd = Math.sqrt(n.vx * n.vx + n.vy * n.vy);
-      if (spd > n.maxSpeed) { const inv = n.maxSpeed / spd; n.vx *= inv; n.vy *= inv; }
-      n.x += n.vx; n.y += n.vy;
-      if (n.x < 0 || n.x > W) { n.vx *= -0.9; n.x = n.x < 0 ? 0 : W; }
-      if (n.y < 0 || n.y > H) { n.vy *= -0.9; n.y = n.y < 0 ? 0 : H; }
+    ctx.clearRect(0, 0, cssW, cssH);
+    if (!routes.length) {
+      animId = requestAnimationFrame(draw);
+      return;
     }
 
-    // ── 2. Links — squared-distance early exit, single computed color ────
-    // Replacing createLinearGradient per link with a computed rgba eliminates
-    // ~600 gradient object allocations per frame — the biggest CPU saving.
-    for (let i = 0; i < nodes.length; i++) {
-      const a = nodes[i];
-      for (let j = i + 1; j < nodes.length; j++) {
-        const b  = nodes[j];
-        const dx = a.x - b.x, dy = a.y - b.y;
-        const distSq = dx * dx + dy * dy;
-        if (distSq >= LINK_DIST_SQ) continue;       // skip sqrt on ~95% of pairs
-        const fade = 1 - Math.sqrt(distSq) / LINK_DIST;
-        if (fade < 0.12) continue;                   // skip near-invisible links
+    for (let i = 0; i < routes.length; i++) {
+      drawRoute(routes[i], i === 5 ? 0.17 : 0.22, i === 5 ? 1.0 : 1.25);
+    }
 
-        const midX  = (a.x + b.x) * 0.5;
-        const bright = midX > W * 0.38 ? 1.0 : 0.42;
-        const pF    = Math.max(0, midX / W - 0.22) / 0.78;  // 0→1 blue→purple
-        const alpha = fade * 0.27 * bright;
+    if (!reduceMotion) {
+      const delta = lastTs ? Math.min(40, ts - lastTs) : 16;
+      lastTs = ts;
 
-        // Single color per link (no gradient object) — visually imperceptible difference
-        const r  = (59  + pF * 97)  | 0;
-        const g  = (168 - pF * 90)  | 0;
-        const bC = (245 - pF * 10)  | 0;
+      for (const ambient of ambientParticles) {
+        ambient.x += ambient.driftX * delta;
+        ambient.y += ambient.driftY * delta;
+        if (ambient.x < 0.06) ambient.x = 0.94;
+        if (ambient.x > 0.94) ambient.x = 0.06;
+        if (ambient.y < 0.10) ambient.y = 0.88;
+        if (ambient.y > 0.88) ambient.y = 0.10;
+
+        const shimmer = 0.55 + 0.45 * Math.sin(ts * 0.0008 + ambient.phase);
+        const x = ambient.x * cssW;
+        const y = ambient.y * cssH;
         ctx.beginPath();
-        ctx.moveTo(a.x, a.y);
-        ctx.lineTo(b.x, b.y);
-        ctx.strokeStyle = `rgba(${r},${g},${bC},${+alpha.toFixed(2)})`;
-        ctx.lineWidth   = fade * 1.0;
-        ctx.stroke();
+        ctx.arc(x, y, ambient.size * (1.4 + shimmer * 0.5), 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(154, 222, 255, ${(0.07 + shimmer * 0.10).toFixed(3)})`;
+        ctx.shadowColor = "rgba(59, 168, 245, 0.24)";
+        ctx.shadowBlur = 6;
+        ctx.fill();
+        ctx.shadowBlur = 0;
       }
-    }
 
-    // ── 3. Nodes ─────────────────────────────────────────────────────────
-    for (let k = 0; k < nodes.length; k++) {
-      const n       = nodes[k];
-      const pulse   = PULSE_NODES.includes(k);
-      const flicker = pulse ? 0.72 + 0.28 * Math.sin(ts * 0.0014 + n.phase) : 1.0;
-      const rBoost  = n.x > W * 0.38 ? 1.45 : 0.72;
-
-      if (pulse) {
-        const pF = Math.max(0, n.x / W - 0.22) / 0.78;
-        const rC = (29  + pF * 126) | 0;
-        const gC = (133 - pF * 120) | 0;
-        const bC = (242 - pF * 20)  | 0;
-        const grd = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.r * 6);
-        grd.addColorStop(0, `rgba(${rC},${gC},${bC},${+(0.22 * flicker * rBoost).toFixed(2)})`);
-        grd.addColorStop(1, `rgba(${rC},${gC},${bC},0)`);
+      let visibleBursts = 0;
+      for (const burst of softBursts) {
+        const local = (ts - burst.delay) % burst.period;
+        if (local < 0 || local > 1450) continue;
+        if (visibleBursts >= 3) break;
+        visibleBursts++;
+        const progress = local / 1450;
+        const alpha = Math.sin(progress * Math.PI) * 0.12;
+        const x = burst.x * cssW;
+        const y = burst.y * cssH;
         ctx.beginPath();
-        ctx.arc(n.x, n.y, n.r * 6, 0, Math.PI * 2);
-        ctx.fillStyle = grd;
+        ctx.arc(x, y, 4 + progress * 22, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(138, 218, 255, ${alpha.toFixed(3)})`;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(x, y, 1.6 + progress * 2, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(190, 238, 255, ${(alpha * 0.9).toFixed(3)})`;
         ctx.fill();
       }
 
-      ctx.beginPath();
-      ctx.arc(n.x, n.y, n.r * flicker, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(74,184,247,${+(n.alpha * flicker * rBoost * 0.85).toFixed(2)})`;
-      ctx.fill();
+      for (const particle of particles) {
+        if (ts < particle.delay) continue;
+        particle.t += particle.speed * delta;
+        if (particle.t > 1) particle.t = 0;
+
+        const route = routes[particle.route];
+        const head = pointOnRoute(route, particle.t);
+        const tail = pointOnRoute(route, Math.max(0, particle.t - 0.085));
+        const glow = ctx.createLinearGradient(tail.x, tail.y, head.x, head.y);
+        glow.addColorStop(0, "rgba(107, 206, 255, 0)");
+        glow.addColorStop(1, "rgba(190, 238, 255, 0.72)");
+
+        ctx.beginPath();
+        ctx.moveTo(tail.x, tail.y);
+        ctx.lineTo(head.x, head.y);
+        ctx.strokeStyle = glow;
+        ctx.lineWidth = 1.75;
+        ctx.lineCap = "round";
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(head.x, head.y, 2.35, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(222, 248, 255, 0.86)";
+        ctx.shadowColor = "rgba(59, 168, 245, 0.62)";
+        ctx.shadowBlur = 9;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
     }
 
-    // ── 4. Flow particles — data streams ─────────────────────────────────
-    for (let i = 0; i < flowParticles.length; i++) {
-      const fp = flowParticles[i];
-      fp.life++;
-      fp.x += fp.vx;
-      fp.y += fp.vy;
-      if (fp.x > W + 30 || fp.life > fp.maxLife) {
-        flowParticles[i] = mkFlow();
-        continue;
+    for (const node of nodes) {
+      const primary = node.tier === "primary";
+      const color = node.color || "126, 205, 245";
+      const nodeRadius = primary ? 12.0 : 10.6;
+      const coreRadius = primary ? 3.6 : 3.05;
+      const glowRadius = primary ? 31 : 24;
+      const labelOffset = primary ? 22 : 20;
+      const pulse = reduceMotion ? 0 : (Math.sin(ts * 0.0012 + node.pulse) + 1) * 0.5;
+      const glow = ctx.createRadialGradient(node.x, node.y, 0, node.x, node.y, glowRadius);
+      glow.addColorStop(0, `rgba(${color}, ${primary ? 0.23 : 0.16})`);
+      glow.addColorStop(0.45, `rgba(${color}, ${primary ? 0.105 : 0.065})`);
+      glow.addColorStop(1, "rgba(59, 168, 245, 0)");
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, glowRadius, 0, Math.PI * 2);
+      ctx.fillStyle = glow;
+      ctx.fill();
+
+      if (pulse > (primary ? 0.64 : 0.76)) {
+        const alpha = (pulse - (primary ? 0.64 : 0.76)) * (primary ? 0.16 : 0.13);
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, (primary ? 23 : 19) + pulse * (primary ? 13 : 10), 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(${color}, ${alpha.toFixed(3)})`;
+        ctx.lineWidth = 1;
+        ctx.stroke();
       }
 
-      const alpha = Math.sin((fp.life / fp.maxLife) * Math.PI) * 0.65;
-      if (alpha < 0.02) continue;
-
-      const col      = fp.isBlue ? "59,168,245" : "155,93,229";
-      const trailLen = 20 + fp.vx * 18;
-      const tg       = ctx.createLinearGradient(fp.x - trailLen, fp.y, fp.x, fp.y);
-      tg.addColorStop(0, `rgba(${col},0)`);
-      tg.addColorStop(1, `rgba(${col},${+alpha.toFixed(2)})`);
       ctx.beginPath();
-      ctx.moveTo(fp.x - trailLen, fp.y);
-      ctx.lineTo(fp.x, fp.y);
-      ctx.strokeStyle = tg;
-      ctx.lineWidth   = fp.r * 0.85;
+      ctx.arc(node.x, node.y, nodeRadius, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(7, 17, 29, 0.74)";
+      ctx.strokeStyle = `rgba(${color}, ${primary ? 0.68 : 0.55})`;
+      ctx.lineWidth = primary ? 1.25 : 1.05;
+      ctx.fill();
       ctx.stroke();
 
       ctx.beginPath();
-      ctx.arc(fp.x, fp.y, fp.r, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(${col},${+Math.min(alpha * 1.35, 0.85).toFixed(2)})`;
+      ctx.arc(node.x, node.y, coreRadius, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${color}, ${primary ? 0.90 : 0.78})`;
+      ctx.shadowColor = `rgba(${color}, 0.42)`;
+      ctx.shadowBlur = primary ? 10 : 6;
       ctx.fill();
+      ctx.shadowBlur = 0;
+
+      ctx.font = `${primary ? "800" : "700"} ${primary ? "10px" : "9px"} Segoe UI, system-ui, sans-serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillStyle = `rgba(232, 248, 255, ${primary ? 0.84 : 0.72})`;
+      ctx.fillText(node.id, node.x, node.y - labelOffset);
     }
 
     animId = requestAnimationFrame(draw);
   }
 
-  // Pause when hero scrolls out of view — saves GPU entirely
   const heroSection = canvas.closest(".hero-section");
   if (heroSection && "IntersectionObserver" in window) {
     new IntersectionObserver(entries => {
       active = entries[0].isIntersecting;
-      if (active) animId = requestAnimationFrame(draw);
+      if (active && !animId) animId = requestAnimationFrame(draw);
+      if (!active && animId) {
+        cancelAnimationFrame(animId);
+        animId = null;
+      }
     }, { threshold: 0.05 }).observe(heroSection);
   }
 
   window.addEventListener("resize", resize, { passive: true });
 
-  init();
+  resize();
   animId = requestAnimationFrame(draw);
 })();
 
 /* ---- HERO PARALLAX + PSEUDO-3D ---- */
 (function initHeroParallax() {
   const heroSection = document.querySelector(".hero-section");
-  const heroVisual  = document.querySelector(".hero-visual");
   const heroBg      = document.querySelector(".hero-bg");
   const mapPanel    = document.querySelector(".hero-map-panel");
-  if (!heroSection || !heroVisual) return;
+  if (!heroSection || !heroBg) return;  // orb parallax only
 
   let tX = 0, tY = 0, cX = 0, cY = 0;
 
@@ -228,9 +323,6 @@
   (function tick() {
     cX += (tX - cX) * 0.07;
     cY += (tY - cY) * 0.07;
-
-    heroVisual.style.transform =
-      `translate(${(cX * 14).toFixed(2)}px, ${(cY * 9).toFixed(2)}px)`;
 
     if (heroBg) {
       heroBg.style.transform =
@@ -281,8 +373,8 @@
 
       nextX = clampX * 100;
       nextY = clampY * 100;
-      tiltY = (clampX - 0.5) * 8;
-      tiltX = (0.5 - clampY) * 8;
+      tiltY = (clampX - 0.5) * 5;
+      tiltX = (0.5 - clampY) * 5;
       queueCommit();
     }, { passive: true });
 
@@ -430,8 +522,9 @@ if (navToggle && header) {
 
 // Stagger grid children so they cascade in with coordinated delays
 const STAGGER_MAP = [
-  { container: ".benefits-grid", item: ".benefit-card", step: 90 },
-  { container: ".feature-grid",  item: ".feature-block", step: 70 },
+  { container: ".benefits-grid",    item: ".benefit-card", step: 90 },
+  { container: ".ecosystem-grid",   item: ".eco-card",     step: 80 },
+  { container: ".feature-grid",     item: ".feature-block", step: 70 },
 ];
 const staggeredEls = new Set();
 
@@ -461,6 +554,117 @@ const revealObserver = new IntersectionObserver(
 document.querySelectorAll(".reveal").forEach(el => {
   if (!staggeredEls.has(el)) revealObserver.observe(el);
 });
+
+/* ---- METRICS COUNTER ---- */
+(function initMetricsCounter() {
+  const strip = document.querySelector(".metrics-strip");
+  if (!strip) return;
+
+  function easeOutQuart(t) { return 1 - Math.pow(1 - t, 4); }
+
+  function formatValue(raw, format) {
+    if (format === "grouped") {
+      return raw.toLocaleString("pt-BR").replace(",", ".");
+    }
+    if (format === "decimal") {
+      return raw.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+    return String(raw);
+  }
+
+  function animateCounter(el) {
+    const target  = parseFloat(el.dataset.target) || 0;
+    const format  = el.dataset.format || "";
+    const suffix  = el.dataset.suffix || "";
+    const prefix  = el.dataset.prefix || "";
+    const dur     = 1800;
+    const start   = performance.now();
+
+    function step(now) {
+      const elapsed = now - start;
+      const progress = Math.min(elapsed / dur, 1);
+      const eased = easeOutQuart(progress);
+      const current = Math.round(eased * target);
+      el.textContent = prefix + formatValue(current, format) + suffix;
+      if (progress < 1) requestAnimationFrame(step);
+      else el.textContent = prefix + formatValue(target, format) + suffix;
+    }
+    requestAnimationFrame(step);
+  }
+
+  new IntersectionObserver(([entry]) => {
+    if (!entry.isIntersecting) return;
+    strip.querySelectorAll(".js-counter").forEach(animateCounter);
+  }, { threshold: 0.35 }).observe(strip);
+})();
+
+/* ---- WORKSPACE LOGIN MOCK ---- */
+(function initWorkspaceLoginMock() {
+  const loginForms = document.querySelectorAll(".hero-login-form, .login-form");
+  if (!loginForms.length) return;
+
+  function showWorkspaceToast(message, type = "info") {
+    let toast = document.querySelector(".workspace-login-toast");
+    if (!toast) {
+      toast = document.createElement("div");
+      toast.className = "workspace-login-toast";
+      toast.setAttribute("role", "status");
+      toast.setAttribute("aria-live", "polite");
+      document.body.appendChild(toast);
+    }
+
+    toast.textContent = message;
+    toast.dataset.type = type;
+    toast.classList.add("is-visible");
+    window.clearTimeout(toast._hideTimer);
+    toast._hideTimer = window.setTimeout(() => toast.classList.remove("is-visible"), 2600);
+  }
+
+  function simulateWorkspaceAccess(form) {
+    const email = form.querySelector('input[type="email"]');
+    const password = form.querySelector('input[type="password"]');
+    const submit = form.querySelector('button[type="submit"]');
+    const emailValue = email ? email.value.trim() : "empresa@demo.com";
+    const passwordValue = password ? password.value.trim() : "123456";
+
+    if (!emailValue || !passwordValue) {
+      showWorkspaceToast("Use empresa@demo.com e 123456 para acessar o mock.", "error");
+      if (email && !emailValue) email.focus();
+      return;
+    }
+
+    if (!emailValue.includes("@") || passwordValue.length < 4) {
+      showWorkspaceToast("Credenciais demo: empresa@demo.com / 123456.", "error");
+      return;
+    }
+
+    if (submit) {
+      submit.dataset.originalText = submit.textContent;
+      submit.textContent = "Autenticando...";
+      submit.classList.add("is-loading");
+      submit.disabled = true;
+    }
+
+    showWorkspaceToast("Validando acesso ao ROUTflex Workspace...", "info");
+    window.setTimeout(() => {
+      sessionStorage.setItem("routflexWorkspaceMock", JSON.stringify({
+        company: "Distribuidora Alfa LTDA",
+        plan: "Enterprise",
+        environment: "Produção",
+        user: emailValue,
+        authenticatedAt: new Date().toISOString(),
+      }));
+      window.location.href = "workspace.html";
+    }, 950);
+  }
+
+  loginForms.forEach(form => {
+    form.addEventListener("submit", event => {
+      event.preventDefault();
+      simulateWorkspaceAccess(form);
+    });
+  });
+})();
 
 /* ---- CONTACT FORM ---- */
 const form      = document.querySelector(".contact-form");
