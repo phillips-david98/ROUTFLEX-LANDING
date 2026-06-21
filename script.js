@@ -14,7 +14,7 @@
   const previousButton = carousel.querySelector("[data-hero-prev]");
   const nextButton = carousel.querySelector("[data-hero-next]");
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const interval = 7000;
+  const interval = 7600;
   let activeIndex = 0;
   let timer = null;
 
