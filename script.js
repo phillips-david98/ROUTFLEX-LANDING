@@ -3,6 +3,174 @@
    ============================================= */
 
 /* =============================================
+   HERO CAROUSEL — slow ambient crossfade
+   ============================================= */
+(function initHeroCarousel() {
+  const carousel = document.querySelector("[data-hero-carousel]");
+  if (!carousel) return;
+
+  const slides = Array.from(carousel.querySelectorAll("[data-hero-slide]"));
+  const indicators = Array.from(carousel.querySelectorAll("[data-hero-indicator]"));
+  const previousButton = carousel.querySelector("[data-hero-prev]");
+  const nextButton = carousel.querySelector("[data-hero-next]");
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const interval = 7000;
+  let activeIndex = 0;
+  let timer = null;
+
+  function showSlide(index) {
+    activeIndex = (index + slides.length) % slides.length;
+
+    slides.forEach((slide, slideIndex) => {
+      slide.classList.toggle("is-active", slideIndex === activeIndex);
+    });
+
+    indicators.forEach((indicator, indicatorIndex) => {
+      const isActive = indicatorIndex === activeIndex;
+      indicator.classList.toggle("is-active", isActive);
+      if (isActive) {
+        indicator.setAttribute("aria-current", "true");
+      } else {
+        indicator.removeAttribute("aria-current");
+      }
+    });
+  }
+
+  function stopAutoplay() {
+    window.clearInterval(timer);
+    timer = null;
+  }
+
+  function startAutoplay() {
+    stopAutoplay();
+    if (reduceMotion || document.hidden) return;
+    timer = window.setInterval(() => showSlide(activeIndex + 1), interval);
+  }
+
+  function selectSlide(index) {
+    showSlide(index);
+    startAutoplay();
+  }
+
+  previousButton?.addEventListener("click", () => selectSlide(activeIndex - 1));
+  nextButton?.addEventListener("click", () => selectSlide(activeIndex + 1));
+  indicators.forEach((indicator, index) => {
+    indicator.addEventListener("click", () => selectSlide(index));
+  });
+
+  carousel.addEventListener("focusin", stopAutoplay);
+  carousel.addEventListener("focusout", event => {
+    if (!carousel.contains(event.relatedTarget)) startAutoplay();
+  });
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) stopAutoplay();
+    else startAutoplay();
+  });
+
+  showSlide(0);
+  startAutoplay();
+})();
+
+/* =============================================
+   ECOSYSTEM CAROUSEL — product showcase
+   ============================================= */
+(function initEcosystemCarousel() {
+  const carousel = document.querySelector("[data-ecosystem-carousel]");
+  if (!carousel) return;
+
+  const cards = Array.from(carousel.querySelectorAll("[data-ecosystem-card]"));
+  const indicators = Array.from(carousel.querySelectorAll("[data-ecosystem-indicator]"));
+  const previousButton = carousel.querySelector("[data-ecosystem-prev]");
+  const nextButton = carousel.querySelector("[data-ecosystem-next]");
+  const title = carousel.querySelector("[data-ecosystem-title]");
+  const moduleName = carousel.querySelector("[data-ecosystem-name]");
+  const moduleSubtitle = carousel.querySelector("[data-ecosystem-subtitle]");
+  let activeIndex = 0;
+  let pointerStart = null;
+  let titleTimer = null;
+
+  function normalize(index) {
+    return (index + cards.length) % cards.length;
+  }
+
+  function showCard(index) {
+    activeIndex = normalize(index);
+    const previousIndex = normalize(activeIndex - 1);
+    const nextIndex = normalize(activeIndex + 1);
+    const activeCard = cards[activeIndex];
+
+    cards.forEach((card, cardIndex) => {
+      const isActive = cardIndex === activeIndex;
+      card.classList.toggle("is-active", isActive);
+      card.classList.toggle("is-prev", cardIndex === previousIndex);
+      card.classList.toggle("is-next", cardIndex === nextIndex);
+      card.setAttribute("aria-hidden", isActive ? "false" : "true");
+      card.tabIndex = isActive ? 0 : -1;
+    });
+
+    indicators.forEach((indicator, indicatorIndex) => {
+      const isActive = indicatorIndex === activeIndex;
+      indicator.classList.toggle("is-active", isActive);
+      if (isActive) indicator.setAttribute("aria-current", "true");
+      else indicator.removeAttribute("aria-current");
+    });
+
+    window.clearTimeout(titleTimer);
+    title?.classList.add("is-changing");
+    titleTimer = window.setTimeout(() => {
+      if (moduleName) moduleName.textContent = activeCard.dataset.moduleName || "";
+      if (moduleSubtitle) moduleSubtitle.textContent = activeCard.dataset.moduleTitle || "";
+      title?.classList.remove("is-changing");
+    }, 140);
+  }
+
+  previousButton?.addEventListener("click", () => showCard(activeIndex - 1));
+  nextButton?.addEventListener("click", () => showCard(activeIndex + 1));
+
+  indicators.forEach((indicator, index) => {
+    indicator.addEventListener("click", () => showCard(index));
+  });
+
+  cards.forEach((card, index) => {
+    card.addEventListener("click", () => {
+      if (card.classList.contains("is-prev")) showCard(activeIndex - 1);
+      if (card.classList.contains("is-next")) showCard(activeIndex + 1);
+    });
+  });
+
+  carousel.addEventListener("keydown", event => {
+    if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      showCard(activeIndex - 1);
+    }
+    if (event.key === "ArrowRight") {
+      event.preventDefault();
+      showCard(activeIndex + 1);
+    }
+  });
+
+  carousel.addEventListener("pointerdown", event => {
+    if (event.pointerType === "mouse") return;
+    pointerStart = { x: event.clientX, y: event.clientY };
+  }, { passive: true });
+
+  carousel.addEventListener("pointerup", event => {
+    if (!pointerStart) return;
+    const distanceX = event.clientX - pointerStart.x;
+    const distanceY = event.clientY - pointerStart.y;
+    pointerStart = null;
+    if (Math.abs(distanceX) < 44 || Math.abs(distanceX) <= Math.abs(distanceY)) return;
+    showCard(activeIndex + (distanceX < 0 ? 1 : -1));
+  }, { passive: true });
+
+  carousel.addEventListener("pointercancel", () => {
+    pointerStart = null;
+  }, { passive: true });
+
+  showCard(0);
+})();
+
+/* =============================================
    HERO CANVAS — Operational route layer
    =============================================
    Minimal route mesh inspired by ROUTflex Planning:
@@ -523,7 +691,6 @@ if (navToggle && header) {
 // Stagger grid children so they cascade in with coordinated delays
 const STAGGER_MAP = [
   { container: ".benefits-grid",    item: ".benefit-card", step: 90 },
-  { container: ".ecosystem-grid",   item: ".eco-card",     step: 80 },
   { container: ".feature-grid",     item: ".feature-block", step: 70 },
 ];
 const staggeredEls = new Set();
