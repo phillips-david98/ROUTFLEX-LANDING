@@ -79,31 +79,87 @@
   if (!carousel) return;
 
   const cards = Array.from(carousel.querySelectorAll("[data-ecosystem-card]"));
+  if (!cards.length) return;
+
   const indicators = Array.from(carousel.querySelectorAll("[data-ecosystem-indicator]"));
   const previousButton = carousel.querySelector("[data-ecosystem-prev]");
   const nextButton = carousel.querySelector("[data-ecosystem-next]");
+  const grid = carousel.querySelector(".ecosystem-grid");
   const title = carousel.querySelector("[data-ecosystem-title]");
   const moduleName = carousel.querySelector("[data-ecosystem-name]");
   const moduleSubtitle = carousel.querySelector("[data-ecosystem-subtitle]");
-  let activeIndex = 0;
+  const reduceMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const mobileQuery = window.matchMedia("(max-width: 640px)");
+  const tabletQuery = window.matchMedia("(max-width: 960px)");
+
+  const autoSpeed = 1 / 6600;
+  let trackProgress = 0;
+  let targetProgress = null;
+  let activeIndex = -1;
   let pointerStart = null;
   let titleTimer = null;
+  let lastFrame = 0;
+  let isHovered = false;
+  let isFocused = false;
+  let stageWidth = 0;
+  let cardWidth = 0;
 
-  function normalize(index) {
+  function wrapIndex(index) {
     return (index + cards.length) % cards.length;
   }
 
-  function showCard(index) {
-    activeIndex = normalize(index);
-    const previousIndex = normalize(activeIndex - 1);
-    const nextIndex = normalize(activeIndex + 1);
+  function wrapProgress(value) {
+    return ((value % cards.length) + cards.length) % cards.length;
+  }
+
+  function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+  }
+
+  function measureTrack() {
+    stageWidth = grid?.clientWidth || carousel.clientWidth || window.innerWidth || 0;
+    cardWidth = cards[0]?.offsetWidth || Math.min(900, stageWidth * 0.68);
+  }
+
+  function getTrackOffset(cardIndex, base = trackProgress) {
+    let offset = cardIndex - wrapProgress(base);
+    const half = cards.length / 2;
+
+    if (offset > half) offset -= cards.length;
+    if (offset < -half) offset += cards.length;
+
+    return offset;
+  }
+
+  function getCenterIndex(base = trackProgress) {
+    return wrapIndex(Math.round(wrapProgress(base)));
+  }
+
+  function getTargetProgress(index) {
+    const nextIndex = wrapIndex(index);
+    const current = wrapProgress(trackProgress);
+    const half = cards.length / 2;
+    let delta = nextIndex - current;
+
+    if (delta > half) delta -= cards.length;
+    if (delta < -half) delta += cards.length;
+
+    return trackProgress + delta;
+  }
+
+  function updateActiveState(index, immediate = false) {
+    if (!immediate && index === activeIndex) return;
+    activeIndex = index;
     const activeCard = cards[activeIndex];
 
     cards.forEach((card, cardIndex) => {
       const isActive = cardIndex === activeIndex;
+      const position = getTrackOffset(cardIndex, activeIndex);
       card.classList.toggle("is-active", isActive);
-      card.classList.toggle("is-prev", cardIndex === previousIndex);
-      card.classList.toggle("is-next", cardIndex === nextIndex);
+      card.classList.toggle("is-prev", position === -1);
+      card.classList.toggle("is-next", position === 1);
+      card.classList.toggle("is-far-prev", position < -1);
+      card.classList.toggle("is-far-next", position > 1);
       card.setAttribute("aria-hidden", isActive ? "false" : "true");
       card.tabIndex = isActive ? 0 : -1;
     });
@@ -116,36 +172,121 @@
     });
 
     window.clearTimeout(titleTimer);
-    title?.classList.add("is-changing");
+    if (!immediate) title?.classList.add("is-changing");
     titleTimer = window.setTimeout(() => {
       if (moduleName) moduleName.textContent = activeCard.dataset.moduleName || "";
       if (moduleSubtitle) moduleSubtitle.textContent = activeCard.dataset.moduleTitle || "";
       title?.classList.remove("is-changing");
-    }, 140);
+    }, immediate ? 0 : 120);
   }
 
-  previousButton?.addEventListener("click", () => showCard(activeIndex - 1));
-  nextButton?.addEventListener("click", () => showCard(activeIndex + 1));
+  function getTrackLayout(offset) {
+    const mobile = mobileQuery.matches;
+    const tablet = tabletQuery.matches;
+    const activeScale = mobile ? 1 : tablet ? 1.025 : 1.06;
+    const phase = (offset / (cards.length / 2)) * Math.PI;
+    const sinPhase = Math.sin(phase);
+    const cosPhase = Math.cos(phase);
+    const frontFactor = (cosPhase + 1) / 2;
+    const sideShift = mobile
+      ? Math.min(cardWidth * 0.48, stageWidth * 0.34)
+      : tablet
+        ? Math.min(cardWidth * 0.56, stageWidth * 0.30)
+        : Math.min(cardWidth * 0.60, stageWidth * 0.29);
+    const lift = mobile ? 0 : tablet ? 34 : 80;
+    const depth = mobile ? 92 : tablet ? 154 : 210;
+    const backScale = mobile ? 0.84 : tablet ? 0.79 : 0.80;
+    const backOpacity = mobile ? 0 : tablet ? 0.22 : 0.20;
+    const maxRotation = mobile ? 0 : tablet ? 11 : 12;
+    const scaleDepth = Math.pow(frontFactor, mobile ? 1.45 : 1.12);
+    const opacityDepth = Math.pow(frontFactor, mobile ? 0.70 : 0.32);
+    const x = sinPhase * sideShift;
+    const z = lift - depth * (1 - frontFactor);
+    const scale = backScale + (activeScale - backScale) * scaleDepth;
+    const opacity = mobile && frontFactor < 0.22
+      ? 0
+      : backOpacity + (1 - backOpacity) * opacityDepth;
+    const rotation = -sinPhase * maxRotation;
+    const zIndex = Math.round(1000 + frontFactor * 500);
+    const shadowStrength = frontFactor * frontFactor;
+    const shadowBlur = 30 + shadowStrength * 42;
+    const shadowAlpha = 0.08 + shadowStrength * 0.14;
+
+    return { x, z, scale, opacity, rotation, zIndex, shadowBlur, shadowAlpha };
+  }
+
+  function renderTrack() {
+    if (!stageWidth || !cardWidth) measureTrack();
+
+    const centerIndex = getCenterIndex();
+    updateActiveState(centerIndex);
+
+    cards.forEach((card, cardIndex) => {
+      const offset = getTrackOffset(cardIndex);
+      const distance = Math.abs(offset);
+      const layout = getTrackLayout(offset);
+
+      card.style.transform = `translate3d(calc(-50% + ${layout.x.toFixed(2)}px), 0, ${layout.z.toFixed(2)}px) rotateY(${layout.rotation.toFixed(3)}deg) scale(${layout.scale.toFixed(3)})`;
+      card.style.opacity = layout.opacity.toFixed(3);
+      card.style.zIndex = String(layout.zIndex);
+      card.style.boxShadow = `0 24px ${layout.shadowBlur.toFixed(1)}px rgba(15, 23, 42, ${layout.shadowAlpha.toFixed(3)}), 0 4px 14px rgba(15, 23, 42, 0.08)`;
+      card.style.pointerEvents = layout.opacity > 0.05 && distance <= 2.05 ? "auto" : "none";
+    });
+  }
+
+  function selectCard(index) {
+    targetProgress = getTargetProgress(index);
+    if (reduceMotionQuery.matches) {
+      trackProgress = wrapProgress(targetProgress);
+      targetProgress = null;
+      renderTrack();
+    }
+  }
+
+  function animate(timestamp) {
+    if (!lastFrame) lastFrame = timestamp;
+    const delta = Math.min(timestamp - lastFrame, 48);
+    lastFrame = timestamp;
+
+    if (targetProgress !== null) {
+      const distance = targetProgress - trackProgress;
+      const easing = 1 - Math.pow(0.001, delta / 950);
+      trackProgress += distance * easing;
+
+      if (Math.abs(distance) < 0.0015) {
+        trackProgress = targetProgress;
+        targetProgress = null;
+      }
+    } else if (!reduceMotionQuery.matches && !isHovered && !isFocused && !document.hidden) {
+      trackProgress += delta * autoSpeed;
+    }
+
+    if (targetProgress === null) trackProgress = wrapProgress(trackProgress);
+    renderTrack();
+    window.requestAnimationFrame(animate);
+  }
+
+  previousButton?.addEventListener("click", () => selectCard(activeIndex - 1));
+  nextButton?.addEventListener("click", () => selectCard(activeIndex + 1));
 
   indicators.forEach((indicator, index) => {
-    indicator.addEventListener("click", () => showCard(index));
+    indicator.addEventListener("click", () => selectCard(index));
   });
 
   cards.forEach((card, index) => {
     card.addEventListener("click", () => {
-      if (card.classList.contains("is-prev")) showCard(activeIndex - 1);
-      if (card.classList.contains("is-next")) showCard(activeIndex + 1);
+      if (index !== activeIndex) selectCard(index);
     });
   });
 
   carousel.addEventListener("keydown", event => {
     if (event.key === "ArrowLeft") {
       event.preventDefault();
-      showCard(activeIndex - 1);
+      selectCard(activeIndex - 1);
     }
     if (event.key === "ArrowRight") {
       event.preventDefault();
-      showCard(activeIndex + 1);
+      selectCard(activeIndex + 1);
     }
   });
 
@@ -160,14 +301,31 @@
     const distanceY = event.clientY - pointerStart.y;
     pointerStart = null;
     if (Math.abs(distanceX) < 44 || Math.abs(distanceX) <= Math.abs(distanceY)) return;
-    showCard(activeIndex + (distanceX < 0 ? 1 : -1));
+    selectCard(activeIndex + (distanceX < 0 ? 1 : -1));
   }, { passive: true });
 
   carousel.addEventListener("pointercancel", () => {
     pointerStart = null;
   }, { passive: true });
 
-  showCard(0);
+  carousel.addEventListener("pointerenter", () => { isHovered = true; });
+  carousel.addEventListener("pointerleave", () => { isHovered = false; });
+  carousel.addEventListener("focusin", () => { isFocused = true; });
+  carousel.addEventListener("focusout", event => {
+    if (!carousel.contains(event.relatedTarget)) isFocused = false;
+  });
+  document.addEventListener("visibilitychange", () => {
+    lastFrame = 0;
+  });
+  window.addEventListener("resize", () => {
+    measureTrack();
+    renderTrack();
+  }, { passive: true });
+
+  measureTrack();
+  updateActiveState(0, true);
+  renderTrack();
+  window.requestAnimationFrame(animate);
 })();
 
 /* =============================================
@@ -580,6 +738,49 @@ if (navToggle && header) {
       navToggle.setAttribute("aria-expanded", "false");
     });
   });
+}
+
+if (mainNav) {
+  const navLinks = Array.from(mainNav.querySelectorAll("a"));
+  const desktopNavQuery = window.matchMedia("(min-width: 961px)");
+  let activeLink = mainNav.querySelector("a.is-active") || navLinks[0];
+
+  function moveLiquidIndicator(link) {
+    if (!link || !desktopNavQuery.matches) return;
+
+    const navRect = mainNav.getBoundingClientRect();
+    const linkRect = link.getBoundingClientRect();
+
+    mainNav.style.setProperty("--liquid-x", `${linkRect.left - navRect.left}px`);
+    mainNav.style.setProperty("--liquid-y", `${linkRect.top - navRect.top}px`);
+    mainNav.style.setProperty("--liquid-w", `${linkRect.width}px`);
+    mainNav.style.setProperty("--liquid-h", `${linkRect.height}px`);
+  }
+
+  function setActiveLink(link) {
+    activeLink = link;
+    navLinks.forEach(item => {
+      const isActive = item === activeLink;
+      item.classList.toggle("is-active", isActive);
+      if (isActive) {
+        item.setAttribute("aria-current", "page");
+      } else {
+        item.removeAttribute("aria-current");
+      }
+    });
+    moveLiquidIndicator(activeLink);
+  }
+
+  navLinks.forEach(link => {
+    link.addEventListener("pointerenter", () => moveLiquidIndicator(link));
+    link.addEventListener("focus", () => moveLiquidIndicator(link));
+    link.addEventListener("click", () => setActiveLink(link));
+  });
+
+  mainNav.addEventListener("pointerleave", () => moveLiquidIndicator(activeLink));
+  window.addEventListener("resize", () => moveLiquidIndicator(activeLink), { passive: true });
+  window.addEventListener("load", () => moveLiquidIndicator(activeLink), { once: true });
+  requestAnimationFrame(() => moveLiquidIndicator(activeLink));
 }
 
 /* ---- OPMODE MOCK — day/cycle/route animation ---- */
