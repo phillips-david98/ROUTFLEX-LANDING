@@ -20,7 +20,7 @@
     <header class="site-header" id="topo">
       <div class="container header-inner">
         <a class="brand" href="#topo" aria-label="ROUTflex HUB inicio">
-          <img class="brand-logo" src="assets/logo.png" alt="ROUTflex" loading="eager" width="42" height="42">
+          <img class="brand-logo" src="assets/logo-icon-transparent.png" alt="ROUTflex" loading="eager" width="42" height="42">
           <span class="brand-text">
             <strong><span class="brand-rout">ROUT</span><span class="brand-flex">flex</span></strong>
             <small>HUB OPERACIONAL</small>
@@ -235,28 +235,39 @@
       <!-- MODULE DETAIL — SALES -->
       <section class="section module-detail-section module-sales-section section--light" aria-label="ROUTflex Sales detalhe">
         <div class="container">
-          <div class="module-detail-inner module-detail-inner--reverse">
+          <div class="module-detail-inner module-detail-inner--sales">
             <div class="module-detail-media reveal">
-              <div class="module-frame">
+              <div class="module-frame module-frame--sales">
                 <div class="frame-chrome" aria-hidden="true">
                   <div class="frame-dots"><span></span><span></span><span></span></div>
                   <span class="frame-url">app.routflex.com.br &mdash; Sales</span>
                 </div>
-                <video autoplay muted loop playsinline preload="metadata" aria-label="Demonstracao ROUTflex Sales CRM">
-                  <source src="assets/crm-funcional.mp4" type="video/mp4">
-                </video>
+                <div class="sales-video-stage" data-sales-video-showcase>
+                  <video class="sales-demo-video is-active" data-sales-demo-video autoplay muted loop playsinline preload="metadata" aria-label="Demonstracao ROUTflex Sales CRM">
+                    <source src="assets/crm-funcional.mp4" type="video/mp4">
+                  </video>
+                  <video class="sales-demo-video" data-sales-demo-video autoplay muted loop playsinline preload="metadata" aria-label="Demonstracao premium ROUTflex Sales CRM">
+                    <source src="assets/crm-premium.mp4" type="video/mp4">
+                  </video>
+                </div>
               </div>
             </div>
-            <div class="module-detail-copy reveal">
-              <span class="module-pill module-pill--sales">Sales</span>
-              <h2>CRM operacional integrado ao ecossistema de campo.</h2>
-              <p>Gestao comercial 360 graus com visao de funil, historico de relacionamento e automacao de processos &mdash; conectado com os dados operacionais do Planning e OPS.</p>
+            <div class="module-detail-copy module-detail-copy--sales reveal">
+              <span class="module-pill module-pill--sales">Sales ROUTflex</span>
+              <h2>CRM operacional para vender, acompanhar e faturar com mais controle.</h2>
+              <p>Conecte clientes, oportunidades, pedidos e faturamento em uma visao unica, integrada ao planejamento territorial e a operacao de campo.</p>
               <ul class="module-detail-list">
-                <li><span class="mdl-check" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3,8 6,11 13,4"/></svg></span><span><strong>CRM Inteligente</strong> &mdash; Historico completo de relacionamento e automacao</span></li>
-                <li><span class="mdl-check" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3,8 6,11 13,4"/></svg></span><span><strong>Gestao de Funil</strong> &mdash; Visao completa de oportunidades e conversoes</span></li>
-                <li><span class="mdl-check" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3,8 6,11 13,4"/></svg></span><span><strong>Performance Comercial</strong> &mdash; Dashboards e KPIs em tempo real</span></li>
-                <li><span class="mdl-check" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3,8 6,11 13,4"/></svg></span><span><strong>Integracao ERP/Financeiro</strong> &mdash; Fluxo de vendas ate o faturamento</span></li>
+                <li><span class="mdl-check" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3,8 6,11 13,4"/></svg></span><span><strong>Cliente 360</strong> &mdash; historico, oportunidades, pedidos e relacionamento em uma visao unica.</span></li>
+                <li><span class="mdl-check" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3,8 6,11 13,4"/></svg></span><span><strong>Funil comercial rastreavel</strong> &mdash; acompanhe negociacoes, conversoes e proximos passos sem perder informacao.</span></li>
+                <li><span class="mdl-check" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3,8 6,11 13,4"/></svg></span><span><strong>Pedidos conectados a operacao</strong> &mdash; transforme oportunidades em pedidos com mais controle ate o faturamento.</span></li>
+                <li><span class="mdl-check" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3,8 6,11 13,4"/></svg></span><span><strong>Indicadores para decisao</strong> &mdash; acompanhe receita, conversao, carteira e desempenho comercial em tempo real.</span></li>
               </ul>
+              <div class="sales-proof-strip" aria-label="Indicadores operacionais do Sales">
+                <span>Cliente 360</span>
+                <span>Funil por etapa</span>
+                <span>Pedido ao faturamento</span>
+                <span>KPIs em tempo real</span>
+              </div>
             </div>
           </div>
         </div>

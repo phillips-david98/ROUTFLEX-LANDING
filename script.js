@@ -72,6 +72,84 @@
 })();
 
 /* =============================================
+   SALES VIDEO SHOWCASE — soft in-card crossfade
+   ============================================= */
+(function initSalesVideoShowcase() {
+  const stage = document.querySelector("[data-sales-video-showcase]");
+  if (!stage) return;
+
+  const videos = Array.from(stage.querySelectorAll("[data-sales-demo-video]"));
+  if (videos.length < 2) return;
+
+  const frame = stage.closest(".module-frame--sales") || stage;
+  const reduceMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const interval = 7200;
+  let activeIndex = 0;
+  let timer = null;
+  let isHovered = false;
+  let isFocused = false;
+
+  function playVideo(video) {
+    video.muted = true;
+    video.playsInline = true;
+    const playPromise = video.play?.();
+    if (playPromise?.catch) playPromise.catch(() => {});
+  }
+
+  function showVideo(index) {
+    activeIndex = (index + videos.length) % videos.length;
+
+    videos.forEach((video, videoIndex) => {
+      const isActive = videoIndex === activeIndex;
+      video.classList.toggle("is-active", isActive);
+      video.setAttribute("aria-hidden", isActive ? "false" : "true");
+      playVideo(video);
+    });
+  }
+
+  function stopRotation() {
+    window.clearInterval(timer);
+    timer = null;
+  }
+
+  function startRotation() {
+    stopRotation();
+    if (reduceMotionQuery.matches || document.hidden || isHovered || isFocused) return;
+    timer = window.setInterval(() => showVideo(activeIndex + 1), interval);
+  }
+
+  videos.forEach(playVideo);
+  showVideo(0);
+  startRotation();
+
+  frame.addEventListener("mouseenter", () => {
+    isHovered = true;
+    stopRotation();
+  });
+  frame.addEventListener("mouseleave", () => {
+    isHovered = false;
+    startRotation();
+  });
+  frame.addEventListener("focusin", () => {
+    isFocused = true;
+    stopRotation();
+  });
+  frame.addEventListener("focusout", event => {
+    if (!frame.contains(event.relatedTarget)) {
+      isFocused = false;
+      startRotation();
+    }
+  });
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) stopRotation();
+    else startRotation();
+  });
+
+  reduceMotionQuery.addEventListener?.("change", startRotation);
+})();
+
+/* =============================================
    ECOSYSTEM CAROUSEL — product showcase
    ============================================= */
 (function initEcosystemCarousel() {
