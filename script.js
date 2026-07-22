@@ -1049,6 +1049,16 @@ document.querySelectorAll(".reveal").forEach(el => {
   const loginForms = document.querySelectorAll(".hero-login-form, .login-form");
   if (!loginForms.length) return;
 
+  const loader = document.querySelector("[data-access-loader]");
+  const loaderPercent = loader?.querySelector("[data-access-loader-percent]");
+  const loaderStatus = loader?.querySelector("[data-access-loader-status]");
+  const loaderBar = loader?.querySelector("[data-access-loader-bar]");
+  const loaderCanvas = loader?.querySelector("[data-access-loader-canvas]");
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const workspaceDestination = "workspace.html";
+  let isAccessLoading = false;
+  let hexCanvasLoader = null;
+
   function showWorkspaceToast(message, type = "info") {
     let toast = document.querySelector(".workspace-login-toast");
     if (!toast) {
@@ -1066,7 +1076,329 @@ document.querySelectorAll(".reveal").forEach(el => {
     toast._hideTimer = window.setTimeout(() => toast.classList.remove("is-visible"), 2600);
   }
 
+  function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+  }
+
+  function createHexCanvasLoader(canvas) {
+    const ctx = canvas.getContext("2d");
+    let width = 0;
+    let height = 0;
+    let dpr = 1;
+    let cells = [];
+    let rafId = null;
+    let startedAt = 0;
+    let currentProgress = 0;
+
+    function seeded(value) {
+      const x = Math.sin(value * 127.1) * 43758.5453;
+      return x - Math.floor(x);
+    }
+
+    function smoothstep(value) {
+      const t = clamp(value, 0, 1);
+      return t * t * (3 - 2 * t);
+    }
+
+    function getHexPoints(cell) {
+      const points = [];
+      const radius = cell.radius * cell.scale;
+      for (let i = 0; i < 6; i++) {
+        const angle = Math.PI / 6 + i * Math.PI / 3;
+        points.push({
+          x: cell.x + Math.cos(angle) * radius,
+          y: cell.y + Math.sin(angle) * radius,
+        });
+      }
+      return points;
+    }
+
+    function buildCells() {
+      cells = [];
+      const centerX = width / 2;
+      const centerY = height / 2;
+      const baseRadius = clamp(Math.min(width, height) / (width < 560 ? 8.4 : 9.4), 25, 50);
+      const xStep = Math.sqrt(3) * baseRadius;
+      const yStep = 1.5 * baseRadius;
+      const rows = Math.ceil(height / yStep) + 2;
+      const cols = Math.ceil(width / xStep) + 2;
+
+      for (let row = -rows; row <= rows; row++) {
+        const y = centerY + row * yStep;
+        const offset = row % 2 ? xStep / 2 : 0;
+
+        for (let col = -cols; col <= cols; col++) {
+          const seed = seeded(row * 37.13 + col * 19.71 + 4.2);
+          const seed2 = seeded(row * 11.9 - col * 29.4 + 8.7);
+          const seed3 = seeded(row * 5.3 + col * 7.1 + 22.5);
+          const x = centerX + col * xStep + offset;
+          const dx = (x - centerX) / (width * 0.50);
+          const dy = (y - centerY) / (height * 0.56);
+          const radial = Math.sqrt(dx * dx + dy * dy);
+          const angle = Math.atan2(dy, dx);
+          const organicEdge = 0.78 + Math.sin(angle * 3.1 + 0.6) * 0.11 + Math.cos(angle * 5.2 - 0.4) * 0.06 + seed * 0.12;
+          const edgeBias = clamp((radial - 0.50) / 0.38, 0, 1);
+
+          if (radial > organicEdge) continue;
+          if (seed2 < edgeBias * 0.52) continue;
+          if (radial > 0.72 && seed3 < 0.18) continue;
+
+          const jitter = baseRadius * (0.10 + edgeBias * 0.09);
+          const scale = clamp(1.06 - radial * 0.28 + seed2 * 0.17, 0.72, 1.10);
+          const delay = clamp(radial * 0.70 + seed * 0.22 + Math.sin(angle * 2.4) * 0.035, 0.015, 0.92);
+
+          cells.push({
+            x: x + (seed - 0.5) * jitter,
+            y: y + (seed2 - 0.5) * jitter,
+            radius: baseRadius,
+            scale,
+            delay,
+            radial,
+            seed,
+            phase: seed3 * Math.PI * 2,
+            depth: clamp(1.06 - radial * 0.42 + seed * 0.12, 0.56, 1.14),
+          });
+        }
+      }
+
+      cells.sort((a, b) => a.delay - b.delay);
+    }
+
+    function resize() {
+      const rect = canvas.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      width = rect.width;
+      height = rect.height;
+      canvas.width = Math.floor(width * dpr);
+      canvas.height = Math.floor(height * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      buildCells();
+    }
+
+    function drawPolygon(points, alpha, glow) {
+      if (alpha <= 0) return;
+
+      ctx.beginPath();
+      ctx.moveTo(points[0].x, points[0].y);
+      for (let i = 1; i < points.length; i++) ctx.lineTo(points[i].x, points[i].y);
+      ctx.closePath();
+      ctx.fillStyle = `rgba(15, 139, 255, ${alpha})`;
+      ctx.shadowBlur = glow;
+      ctx.shadowColor = "rgba(56, 189, 248, 0.22)";
+      ctx.fill();
+    }
+
+    function drawHexOutline(points, progress, alpha, widthPx, glow) {
+      const total = clamp(progress, 0, 1) * 6;
+      if (total <= 0 || alpha <= 0) return;
+
+      ctx.lineWidth = widthPx;
+      ctx.lineCap = "round";
+      ctx.strokeStyle = `rgba(125, 211, 252, ${alpha})`;
+      ctx.shadowBlur = glow;
+      ctx.shadowColor = "rgba(56, 189, 248, 0.52)";
+
+      for (let i = 0; i < 6; i++) {
+        const sideProgress = clamp(total - i, 0, 1);
+        if (sideProgress <= 0) continue;
+
+        const a = points[i];
+        const b = points[(i + 1) % 6];
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(
+          a.x + (b.x - a.x) * sideProgress,
+          a.y + (b.y - a.y) * sideProgress
+        );
+        ctx.stroke();
+      }
+    }
+
+    function drawEnergyStroke(points, cell, elapsed, drawProgress, progress01) {
+      if (reduceMotion || drawProgress < 0.45) return;
+      if (cell.seed > 0.52 + progress01 * 0.22) return;
+
+      const side = Math.floor((elapsed / (780 + cell.seed * 520) + cell.phase) % 6);
+      const travel = (elapsed / (1120 + cell.seed * 680) + cell.seed * 1.8) % 1;
+      const tail = 0.34;
+      const start = clamp(travel - tail, 0, 1);
+      const end = clamp(travel, 0, 1);
+      if (end <= start) return;
+
+      const a = points[side];
+      const b = points[(side + 1) % 6];
+      ctx.beginPath();
+      ctx.moveTo(a.x + (b.x - a.x) * start, a.y + (b.y - a.y) * start);
+      ctx.lineTo(a.x + (b.x - a.x) * end, a.y + (b.y - a.y) * end);
+      ctx.lineWidth = 1.8;
+      ctx.lineCap = "round";
+      ctx.strokeStyle = `rgba(224, 247, 255, ${0.28 + progress01 * 0.34})`;
+      ctx.shadowBlur = 20;
+      ctx.shadowColor = "rgba(56, 189, 248, 0.64)";
+      ctx.stroke();
+    }
+
+    function drawCellNode(cell, alpha, radius) {
+      if (alpha <= 0) return;
+      ctx.beginPath();
+      ctx.arc(cell.x, cell.y, radius, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(186, 230, 253, ${alpha})`;
+      ctx.shadowBlur = 14;
+      ctx.shadowColor = "rgba(56, 189, 248, 0.42)";
+      ctx.fill();
+    }
+
+    function drawFrame(timestamp) {
+      if (!width || !height) {
+        resize();
+        if (!width || !height) {
+          if (!reduceMotion) rafId = requestAnimationFrame(drawFrame);
+          return;
+        }
+      }
+
+      const elapsed = timestamp - startedAt;
+      const progress01 = currentProgress / 100;
+
+      ctx.clearRect(0, 0, width, height);
+      const gradient = ctx.createRadialGradient(width / 2, height / 2, 0, width / 2, height / 2, Math.max(width, height) * 0.62);
+      gradient.addColorStop(0, "rgba(15, 139, 255, 0.10)");
+      gradient.addColorStop(0.42, "rgba(56, 189, 248, 0.035)");
+      gradient.addColorStop(1, "rgba(2, 8, 17, 0)");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, width, height);
+
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+
+      const coreGlow = ctx.createRadialGradient(width / 2, height / 2, 0, width / 2, height / 2, Math.min(width, height) * 0.32);
+      coreGlow.addColorStop(0, `rgba(56, 189, 248, ${0.08 + progress01 * 0.12})`);
+      coreGlow.addColorStop(0.48, `rgba(15, 139, 255, ${0.035 + progress01 * 0.04})`);
+      coreGlow.addColorStop(1, "rgba(15, 139, 255, 0)");
+      ctx.fillStyle = coreGlow;
+      ctx.fillRect(0, 0, width, height);
+
+      cells.forEach(cell => {
+        const activation = clamp(((progress01 * 1.24) - cell.delay) / (0.18 + cell.seed * 0.08), 0, 1);
+        if (activation <= 0.01) return;
+
+        const drawProgress = smoothstep(clamp(activation / 0.72, 0, 1));
+        const fillProgress = smoothstep(clamp((activation - 0.50) / 0.46, 0, 1));
+        const pulse = reduceMotion ? 0 : (Math.sin(elapsed * 0.0024 + cell.phase) + 1) / 2;
+        const points = getHexPoints(cell);
+        const lineAlpha = (0.11 + drawProgress * 0.35 + pulse * 0.08) * cell.depth;
+        const fillAlpha = fillProgress * (0.035 + cell.depth * 0.055) * (0.72 + pulse * 0.22);
+        const glow = 4 + fillProgress * 13 + pulse * 6;
+
+        drawPolygon(points, fillAlpha, glow * 0.55);
+        drawHexOutline(points, drawProgress, lineAlpha, 0.85 + cell.depth * 0.72, glow);
+        drawEnergyStroke(points, cell, elapsed, drawProgress, progress01);
+
+        if (fillProgress > 0.12 && cell.seed < 0.08 + progress01 * 0.08) {
+          drawCellNode(cell, fillProgress * (0.18 + progress01 * 0.18), 0.9 + cell.depth * 0.9);
+        }
+      });
+
+      ctx.restore();
+
+      if (!reduceMotion) {
+        rafId = requestAnimationFrame(drawFrame);
+      }
+    }
+
+    function start() {
+      stop();
+      resize();
+      startedAt = performance.now();
+      drawFrame(startedAt);
+      window.addEventListener("resize", resize, { passive: true });
+    }
+
+    function stop() {
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = null;
+      window.removeEventListener("resize", resize);
+    }
+
+    function setProgress(progress) {
+      currentProgress = clamp(progress, 0, 100);
+      if (reduceMotion && width && height) {
+        drawFrame(performance.now());
+      }
+    }
+
+    return { start, stop, setProgress };
+  }
+
+  function ensureHexCanvasLoader() {
+    if (!loaderCanvas) return null;
+    if (!hexCanvasLoader) hexCanvasLoader = createHexCanvasLoader(loaderCanvas);
+    return hexCanvasLoader;
+  }
+
+  function setLoaderProgress(progress, message) {
+    const rounded = Math.min(100, Math.max(0, Math.round(progress)));
+    if (loaderPercent) loaderPercent.textContent = `${rounded}%`;
+    if (loaderStatus) loaderStatus.textContent = message;
+    if (loaderBar) loaderBar.style.width = `${rounded}%`;
+    hexCanvasLoader?.setProgress(rounded);
+  }
+
+  function runAccessLoader(emailValue, onComplete) {
+    if (!loader) {
+      onComplete();
+      return;
+    }
+
+    const statusSteps = [
+      { at: 0, text: "Validando acesso corporativo" },
+      { at: 28, text: "Carregando modulos do ecossistema" },
+      { at: 58, text: "Sincronizando permissoes" },
+      { at: 82, text: "Preparando central operacional" },
+      { at: 100, text: "Bem-vindo ao ROUTflex HUB" },
+    ];
+    const duration = reduceMotion ? 1900 : 3500;
+    let start = null;
+    const canvasLoader = ensureHexCanvasLoader();
+
+    loader.hidden = false;
+    loader.setAttribute("aria-hidden", "false");
+    document.body.classList.add("access-loader-active");
+    setLoaderProgress(0, statusSteps[0].text);
+    requestAnimationFrame(() => {
+      loader.classList.add("is-active");
+      canvasLoader?.start();
+    });
+
+    function step(timestamp) {
+      if (start === null) start = timestamp;
+      const elapsed = timestamp - start;
+      const linear = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - linear, 3);
+      const progress = eased * 100;
+      const currentStatus = statusSteps.reduce((current, item) => (
+        progress >= item.at ? item : current
+      ), statusSteps[0]);
+
+      setLoaderProgress(progress, currentStatus.text);
+
+      if (linear < 1) {
+        requestAnimationFrame(step);
+        return;
+      }
+
+      setLoaderProgress(100, statusSteps[statusSteps.length - 1].text);
+      window.setTimeout(onComplete, reduceMotion ? 420 : 720);
+    }
+
+    requestAnimationFrame(step);
+  }
+
   function simulateWorkspaceAccess(form) {
+    if (isAccessLoading) return;
+
     const email = form.querySelector('input[type="email"]');
     const password = form.querySelector('input[type="password"]');
     const submit = form.querySelector('button[type="submit"]');
@@ -1091,8 +1423,8 @@ document.querySelectorAll(".reveal").forEach(el => {
       submit.disabled = true;
     }
 
-    showWorkspaceToast("Validando acesso ao ROUTflex Workspace...", "info");
-    window.setTimeout(() => {
+    isAccessLoading = true;
+    runAccessLoader(emailValue, () => {
       sessionStorage.setItem("routflexWorkspaceMock", JSON.stringify({
         company: "Distribuidora Alfa LTDA",
         plan: "Enterprise",
@@ -1100,8 +1432,8 @@ document.querySelectorAll(".reveal").forEach(el => {
         user: emailValue,
         authenticatedAt: new Date().toISOString(),
       }));
-      window.location.href = "workspace.html";
-    }, 950);
+      window.location.href = workspaceDestination;
+    });
   }
 
   loginForms.forEach(form => {
