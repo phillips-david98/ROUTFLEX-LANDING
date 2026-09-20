@@ -13,11 +13,40 @@
   <title>ROUTflex HUB | Central Operacional Enterprise</title>
   <link rel="icon" type="image/png" href="assets/logo.png">
   <link rel="stylesheet" href="styles.css">
+  <noscript><style>.rfx-brand-intro{display:none}</style></noscript>
 </head>
 <body>
-  <div class="page-shell">
+  <!-- BRAND INTRO (scaffold) — brief one-time signature shown before the Hero.
+       Isolated under rfx-brand-intro-*; timing/skip logic in the inline script
+       right below (sessionStorage "rfx:intro-seen" + prefers-reduced-motion). -->
+  <div class="rfx-brand-intro" data-brand-intro aria-hidden="true">
+    <div class="rfx-brand-intro-mark">
+      <span class="rfx-brand-intro-logo"><span class="brand-rout">ROUT</span><span class="brand-flex">flex</span></span>
+      <span class="rfx-brand-intro-tagline">logistica inteligente</span>
+    </div>
+  </div>
+  <script>
+  (function () {
+    var introEl = document.querySelector("[data-brand-intro]");
+    if (!introEl) return;
+    var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var seen = false;
+    try { seen = sessionStorage.getItem("rfx:intro-seen") === "1"; } catch (e) {}
 
-    <header class="site-header" id="topo">
+    if (seen || reduceMotion) {
+      introEl.hidden = true;
+      return;
+    }
+    try { sessionStorage.setItem("rfx:intro-seen", "1"); } catch (e) {}
+
+    introEl.classList.add("is-playing");
+    window.setTimeout(function () { introEl.classList.add("is-leaving"); }, 1500);
+    window.setTimeout(function () { introEl.hidden = true; }, 2150);
+  })();
+  </script>
+  <div class="page-shell" id="topo">
+
+    <header class="site-header rfx-site-header">
       <div class="container header-inner">
         <a class="brand" href="#topo" aria-label="ROUTflex HUB inicio">
           <img class="brand-logo" src="assets/logo-icon-transparent.png" alt="ROUTflex" loading="eager" width="42" height="42">
@@ -31,17 +60,13 @@
           <span class="bar bar-bottom"></span>
         </button>
         <nav class="main-nav" id="main-nav" aria-label="Navegacao principal">
-          <a class="is-active" href="#ecossistema" aria-current="page">Ecossistema</a>
+          <a class="is-active" href="#solucoes" aria-current="page">Soluções</a>
           <a href="#workspace">Workspace</a>
           <a href="#resultados">Resultados</a>
           <a href="#contato">Contato</a>
         </nav>
         <div class="header-actions">
-          <a class="button button-ghost header-cta-sec" href="#contato">Agendar Demo</a>
-          <a class="button button-primary header-cta" href="#workspace">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-            Workspace
-          </a>
+          <a class="button button-primary header-cta" href="#contato">Fale com um especialista <span aria-hidden="true">→</span></a>
         </div>
       </div>
     </header>
@@ -66,9 +91,81 @@
           <div class="hero-slide hero-slide--image" data-hero-slide>
             <img src="assets/banner-2.png" alt="" width="1717" height="916" loading="eager" decoding="async">
           </div>
+          <!-- ROUTEX hero state — reuses the ROUTEX composition/copy (previously a
+               standalone section, now the sole ROUTEX presentation) and stays ~1s
+               longer than the other slides (data-hero-duration); see script.js. -->
+          <div class="hero-slide hero-slide--routex" data-hero-slide data-hero-duration="8600">
+            <div class="hero-routex-stage">
+              <div class="container hero-routex-align">
+              <div class="hero-routex-visual">
+                <span class="hero-routex-tag hero-routex-tag--one">Automatiza rotinas</span>
+                <span class="hero-routex-tag hero-routex-tag--two">Conecta m&oacute;dulos</span>
+                <span class="hero-routex-tag hero-routex-tag--three">Analisa cen&aacute;rios</span>
+                <span class="hero-routex-tag hero-routex-tag--four">Apoia decis&otilde;es</span>
+                <div class="routex-life">
+                  <span class="routex-life__aura"></span>
+                  <svg class="routex-life__body" viewBox="0 0 100 100" focusable="false">
+                    <defs>
+                      <linearGradient id="routex-life-body-base-hero" x1="18" y1="10" x2="84" y2="91" gradientUnits="userSpaceOnUse">
+                        <stop offset="0" stop-color="#8f2c78"/>
+                        <stop offset=".28" stop-color="#7824a8"/>
+                        <stop offset=".61" stop-color="#432078"/>
+                        <stop offset="1" stop-color="#15081f"/>
+                      </linearGradient>
+                      <radialGradient id="routex-life-body-light-hero" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(29 27) rotate(48) scale(67 72)">
+                        <stop offset="0" stop-color="#fff1f8" stop-opacity=".44"/>
+                        <stop offset=".22" stop-color="#f9a8d4" stop-opacity=".24"/>
+                        <stop offset=".54" stop-color="#c084fc" stop-opacity=".1"/>
+                        <stop offset="1" stop-color="#7c3aed" stop-opacity="0"/>
+                      </radialGradient>
+                      <radialGradient id="routex-hero-depth">
+                        <stop offset="0" stop-color="#0c091c" stop-opacity=".9"/>
+                        <stop offset=".62" stop-color="#170b30" stop-opacity=".58"/>
+                        <stop offset="1" stop-color="#653292" stop-opacity="0"/>
+                      </radialGradient>
+                      <linearGradient id="routex-hero-rim" x1="0" y1="0" x2="1" y2="1">
+                        <stop stop-color="#f0add9" stop-opacity=".8"/>
+                        <stop offset=".3" stop-color="#b66bf0" stop-opacity=".18"/>
+                        <stop offset=".65" stop-color="#7946d0" stop-opacity=".26"/>
+                        <stop offset="1" stop-color="#e77abb" stop-opacity=".68"/>
+                      </linearGradient>
+                      <radialGradient id="routex-hero-touch" gradientUnits="userSpaceOnUse" cx="28" cy="28" r="26">
+                        <stop stop-color="#f3a0dd" stop-opacity=".7"/>
+                        <stop offset=".4" stop-color="#c16aff" stop-opacity=".24"/>
+                        <stop offset="1" stop-color="#ac54ef" stop-opacity="0"/>
+                      </radialGradient>
+                      <path id="routex-hero-shape" d="M11 39C13 21 30 8 47 13C61 4 78 14 79 30C95 38 94 58 81 68C79 86 58 94 44 84C28 91 11 80 12 64C2 56 3 45 11 39Z"/>
+                      <clipPath id="routex-hero-clip"><use href="#routex-hero-shape"/></clipPath>
+                    </defs>
+                    <path class="routex-life__body-base" d="M11 39C13 21 30 8 47 13C61 4 78 14 79 30C95 38 94 58 81 68C79 86 58 94 44 84C28 91 11 80 12 64C2 56 3 45 11 39Z"/>
+                    <path class="routex-life__body-light" d="M11 39C13 21 30 8 47 13C61 4 78 14 79 30C95 38 94 58 81 68C79 86 58 94 44 84C28 91 11 80 12 64C2 56 3 45 11 39Z"/>
+                    <use href="#routex-hero-shape" fill="url(#routex-hero-depth)"/>
+                    <g class="hero-routex-filaments" clip-path="url(#routex-hero-clip)" fill="none" stroke="url(#routex-hero-rim)" stroke-width=".22">
+                      <path d="M8 62C22 20 53 84 88 27"/>
+                      <path d="M9 67C35 27 50 89 91 34"/>
+                      <path d="M23 7C71 32 22 61 78 90"/>
+                      <path d="M30 5C80 42 35 64 84 82"/>
+                    </g>
+                    <use class="hero-routex-touch" href="#routex-hero-shape" fill="url(#routex-hero-touch)" opacity="0"/>
+                    <use href="#routex-hero-shape" fill="none" stroke="url(#routex-hero-rim)" stroke-width=".65"/>
+                  </svg>
+                  <span class="routex-life__mass">
+                    <span class="routex-life__flow routex-life__flow--one"></span>
+                    <span class="routex-life__flow routex-life__flow--two"></span>
+                    <span class="routex-life__flow routex-life__flow--three"></span>
+                  </span>
+                  <span class="routex-life__energy"></span>
+                  <span class="routex-life__core"><span></span></span>
+                  <span class="routex-life__sparkles"></span>
+                </div>
+              </div>
+              </div>
+            </div>
+          </div>
         </div>
         <div class="container hero-inner">
           <div class="hero-copy reveal">
+            <div class="hero-copy-panel hero-copy-panel--default is-active" data-hero-copy-panel="default">
             <span class="eyebrow eyebrow-light">Ecossistema Enterprise SaaS</span>
             <h1>A central operacional do seu ecossistema empresarial.</h1>
             <p class="hero-lead">
@@ -97,6 +194,17 @@
               <div class="trust-item">
                 <strong>2FA</strong>
                 <span>obrigatorio</span>
+              </div>
+            </div>
+            </div>
+            <div class="hero-copy-panel hero-copy-panel--routex" data-hero-copy-panel="routex" aria-hidden="true">
+              <span class="eyebrow eyebrow-light">Intelig&ecirc;ncia operacional ROUTflex</span>
+              <h1>A intelig&ecirc;ncia viva do ecossistema ROUTflex.</h1>
+              <p class="hero-lead">
+                O ROUTEX automatiza rotinas, conecta m&oacute;dulos e transforma dados operacionais em pr&oacute;ximas a&ccedil;&otilde;es.
+              </p>
+              <div class="hero-actions">
+                <a class="button button-primary" href="#contato">Conhecer o ROUTEX</a>
               </div>
             </div>
           </div>
@@ -134,13 +242,68 @@
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
           </button>
           <div class="hero-carousel-indicators" aria-label="Selecionar visual do hero">
-            <button class="hero-carousel-indicator is-active" type="button" aria-label="Visual 1 de 4" aria-current="true" data-hero-indicator="0"></button>
-            <button class="hero-carousel-indicator" type="button" aria-label="Visual 2 de 4" data-hero-indicator="1"></button>
-            <button class="hero-carousel-indicator" type="button" aria-label="Visual 3 de 4" data-hero-indicator="2"></button>
-            <button class="hero-carousel-indicator" type="button" aria-label="Visual 4 de 4" data-hero-indicator="3"></button>
+            <button class="hero-carousel-indicator is-active" type="button" aria-label="Visual 1 de 5" aria-current="true" data-hero-indicator="0"></button>
+            <button class="hero-carousel-indicator" type="button" aria-label="Visual 2 de 5" data-hero-indicator="1"></button>
+            <button class="hero-carousel-indicator" type="button" aria-label="Visual 3 de 5" data-hero-indicator="2"></button>
+            <button class="hero-carousel-indicator" type="button" aria-label="Visual 4 de 5" data-hero-indicator="3"></button>
+            <button class="hero-carousel-indicator" type="button" aria-label="Visual 5 de 5" data-hero-indicator="4"></button>
           </div>
         </div>
       </section>
+
+      <!-- CINEMATIC — Planning → Sales → Palm → Ops, controlled by scroll. -->
+      <section class="rfx-cinematic-stage" id="solucoes" data-cinematic-stage aria-label="Soluções ROUTflex: do planejamento à operação">
+        <div class="rfx-cinematic-sticky">
+          <nav class="rfx-cinematic-nav" aria-label="Navegação das soluções">
+            <div class="rfx-cinematic-current" aria-live="polite" aria-atomic="true">
+              <span class="rfx-cinematic-count"><b data-cinematic-count>01</b><span> / 04</span></span>
+              <span class="rfx-cinematic-label" data-cinematic-label>Planning</span>
+            </div>
+            <div class="rfx-cinematic-progress" role="progressbar" aria-label="Progresso da experiência" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+              <span class="rfx-cinematic-progress-fill"></span>
+            </div>
+            <div class="rfx-cinematic-arrows">
+              <button type="button" data-cinematic-prev aria-label="Solução anterior" aria-disabled="true"><span aria-hidden="true">←</span></button>
+              <button type="button" data-cinematic-next aria-label="Próxima solução"><span aria-hidden="true">→</span></button>
+            </div>
+          </nav>
+          <div class="rfx-cinematic-composition">
+            <div class="rfx-cinematic-content">
+              <article class="rfx-cinematic-scene" data-cinematic-scene="planning">
+                <span class="rfx-cinematic-eyebrow">ROUTflex <b>Planning</b></span>
+                <h2>Reduza custos.<br>Transforme território em <em>inteligência.</em></h2>
+                <p>Planeje rotas, distribua recursos e simule cenários para uma operação mais eficiente.</p>
+              </article>
+              <article class="rfx-cinematic-scene" data-cinematic-scene="sales">
+                <span class="rfx-cinematic-eyebrow">ROUTflex <b>Sales</b></span>
+                <h2>Conecte estratégia comercial e <em>execução.</em></h2>
+                <p>Clientes, oportunidades e pedidos conectados à operação. Do primeiro contato ao faturamento.</p>
+              </article>
+              <article class="rfx-cinematic-scene" data-cinematic-scene="palm">
+                <span class="rfx-cinematic-eyebrow">ROUTflex <b>Palm</b></span>
+                <h2>Mais visibilidade.<br>Mais agilidade <em>em campo.</em></h2>
+                <p>Conecte suas equipes ao planejamento e acompanhe a execução, onde a operação acontece.</p>
+              </article>
+              <article class="rfx-cinematic-scene" data-cinematic-scene="ops">
+                <span class="rfx-cinematic-eyebrow">ROUTflex <b>Ops</b></span>
+                <h2>Cada etapa visível.<br>A operação <em>sob controle.</em></h2>
+                <p>Acompanhe a execução, audite processos e transforme dados operacionais em decisões.</p>
+              </article>
+            </div>
+            <div class="rfx-cinematic-media" aria-hidden="true">
+              <video class="rfx-cinematic-video" autoplay muted playsinline loop preload="metadata" tabindex="-1" disablepictureinpicture>
+                <source src="assets/routflex-scroll-demo-web-smooth.mp4" type="video/mp4">
+              </video>
+            </div>
+          </div>
+          <div class="rfx-cinematic-footer">
+            <span>Role para explorar <span aria-hidden="true">↓</span></span>
+            <a href="#ecossistema">Conheça o ecossistema <span aria-hidden="true">↗</span></a>
+          </div>
+          <p class="rfx-cinematic-video-status" role="status" hidden>Preparando a cena…</p>
+        </div>
+      </section>
+
 
       <!-- ECOSYSTEM -->
       <section class="section ecosystem-section section--light" id="ecossistema" aria-label="Ecossistema ROUTflex quatro modulos">
@@ -199,7 +362,7 @@
       <section class="section module-detail-section module-planning-section" aria-label="ROUTflex Planning detalhe">
         <div class="container">
           <div class="module-detail-inner">
-            <div class="module-detail-copy module-detail-copy--planning reveal">
+            <div class="module-detail-copy module-detail-copy--planning rfx-planning-reveal-copy">
               <span class="module-pill module-pill--planning">Planning ROUTflex</span>
               <h2>Planejamento territorial com IA para reduzir custos e aumentar produtividade em campo.</h2>
               <p>Equilibre carteiras, simule cenarios e antecipe decisoes operacionais antes que deslocamentos, sobreposicoes e retrabalho virem custo para a empresa.</p>
@@ -217,7 +380,7 @@
               </div>
               <a class="planning-inline-cta" href="#contato">Solicitar demonstracao do Planning</a>
             </div>
-            <div class="module-detail-media reveal">
+            <div class="module-detail-media rfx-planning-reveal-media">
               <div class="module-frame module-frame--planning">
                 <div class="frame-chrome" aria-hidden="true">
                   <div class="frame-dots"><span></span><span></span><span></span></div>
@@ -236,7 +399,7 @@
       <section class="section module-detail-section module-sales-section section--light" aria-label="ROUTflex Sales detalhe">
         <div class="container">
           <div class="module-detail-inner module-detail-inner--sales">
-            <div class="module-detail-media reveal">
+            <div class="module-detail-media rfx-sales-reveal-media">
               <div class="module-frame module-frame--sales">
                 <div class="frame-chrome" aria-hidden="true">
                   <div class="frame-dots"><span></span><span></span><span></span></div>
@@ -252,7 +415,7 @@
                 </div>
               </div>
             </div>
-            <div class="module-detail-copy module-detail-copy--sales reveal">
+            <div class="module-detail-copy module-detail-copy--sales rfx-sales-reveal-copy">
               <span class="module-pill module-pill--sales">Sales ROUTflex</span>
               <h2>CRM operacional para vender, acompanhar e faturar com mais controle.</h2>
               <p>Conecte clientes, oportunidades, pedidos e faturamento em uma visao unica, integrada ao planejamento territorial e a operacao de campo.</p>
@@ -588,11 +751,14 @@
 
   <div class="chat-widget" id="chatWidget">
     <button class="chat-trigger" id="chatTrigger" aria-label="Abrir assistente de IA ROUTflex" aria-expanded="false" aria-controls="chatWindow">
-      <svg class="icon-chat" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-        <path d="M13 2 L5 13 H11 L10 22 L19 11 H13 Z"/>
+      <svg class="chat-orb-plasma chat-orb-plasma-back" viewBox="0 0 84 84" aria-hidden="true" focusable="false">
+        <path pathLength="100" d="M7 43 C8 18 28 7 49 10 C72 13 82 31 76 52 C70 74 42 80 20 67 C9 60 3 51 7 43 Z"/>
       </svg>
-      <svg class="icon-close" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-        <path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+      <span class="chat-orb-mass" aria-hidden="true"></span>
+      <span class="chat-orb-energy" aria-hidden="true"></span>
+      <span class="chat-orb-nucleus" aria-hidden="true"></span>
+      <svg class="chat-orb-plasma chat-orb-plasma-front" viewBox="0 0 84 84" aria-hidden="true" focusable="false">
+        <path pathLength="100" d="M7 43 C8 18 28 7 49 10 C72 13 82 31 76 52 C70 74 42 80 20 67 C9 60 3 51 7 43 Z"/>
       </svg>
     </button>
     <div class="chat-window" id="chatWindow" role="dialog" aria-modal="true" aria-label="Assistente de IA ROUTflex" hidden>
@@ -601,7 +767,7 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M12 3L20 7.5V16.5L12 21L4 16.5V7.5Z"/><circle cx="12" cy="12" r="3"/></svg>
         </div>
         <div class="chat-header-info">
-          <strong>ROUTflex AI</strong>
+          <strong>ROUTEX</strong>
           <span class="chat-status"><em class="status-dot"></em>IA ativa · Analisando dados</span>
         </div>
         <button class="chat-close-btn" id="chatCloseBtn" aria-label="Fechar assistente">
@@ -628,6 +794,11 @@
   <div id="rfxCursorDot"  aria-hidden="true"></div>
   <div id="rfxCursorRing" aria-hidden="true"></div>
 
+  <!-- GSAP + ScrollTrigger remain available for the Landing's other reveals. -->
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+  <script src="cinematic.js"></script>
   <script src="script.js"></script>
+  <script src="routex-hero.js"></script>
 </body>
 </html>

@@ -13,10 +13,17 @@
   const indicators = Array.from(carousel.querySelectorAll("[data-hero-indicator]"));
   const previousButton = carousel.querySelector("[data-hero-prev]");
   const nextButton = carousel.querySelector("[data-hero-next]");
+  const heroCopyDefault = carousel.querySelector('[data-hero-copy-panel="default"]');
+  const heroCopyRoutex = carousel.querySelector('[data-hero-copy-panel="routex"]');
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const interval = 7600;
+  const baseInterval = 7600;
   let activeIndex = 0;
   let timer = null;
+
+  function slideDuration(index) {
+    const duration = parseInt(slides[index]?.dataset.heroDuration, 10);
+    return Number.isFinite(duration) && duration > 0 ? duration : baseInterval;
+  }
 
   function showSlide(index) {
     activeIndex = (index + slides.length) % slides.length;
@@ -34,17 +41,28 @@
         indicator.removeAttribute("aria-current");
       }
     });
+
+    // Crossfade the Hero's full editorial copy (eyebrow/title/lead/CTA) together
+    // with the visual whenever the ROUTEX state is the active slide.
+    const isRoutexActive = slides[activeIndex]?.classList.contains("hero-slide--routex");
+    heroCopyDefault?.classList.toggle("is-dimmed", isRoutexActive);
+    heroCopyRoutex?.classList.toggle("is-active", isRoutexActive);
   }
 
   function stopAutoplay() {
-    window.clearInterval(timer);
+    window.clearTimeout(timer);
     timer = null;
   }
 
   function startAutoplay() {
     stopAutoplay();
     if (reduceMotion || document.hidden) return;
-    timer = window.setInterval(() => showSlide(activeIndex + 1), interval);
+    // setTimeout (not setInterval) so each slide can carry its own duration
+    // (the ROUTEX state stays ~1s longer via data-hero-duration).
+    timer = window.setTimeout(() => {
+      showSlide(activeIndex + 1);
+      startAutoplay();
+    }, slideDuration(activeIndex));
   }
 
   function selectSlide(index) {
@@ -965,6 +983,599 @@ if (mainNav) {
   }, 8000);
 })();
 
+/* ---- ROUTEX SHOWCASE — organic SVG morphology and interaction ---- */
+(function initRoutexShowcase() {
+  const showcase = document.getElementById("routex-vitrine");
+  const life = showcase?.querySelector("[data-routex-life]");
+  if (!showcase || !life) return;
+
+  const shapeNodes = Array.from(life.querySelectorAll("[data-routex-shape]"));
+  const ripple = life.querySelector(".routex-life__ripple");
+  const bodyLightGradient = life.querySelector("#routex-life-body-light");
+  const message = showcase.querySelector("[data-routex-message]");
+  if (!shapeNodes.length || !message) return;
+
+  const reduceMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const finePointerQuery = window.matchMedia("(hover: hover) and (pointer: fine)");
+  const smallScreenQuery = window.matchMedia("(max-width: 640px)");
+  const pointCount = 8;
+  const fullTurn = Math.PI * 2;
+  const reactionClasses = [
+    "is-speaking-ready",
+    "is-speaking-routes",
+    "is-speaking-thinking",
+    "is-speaking-scan",
+  ];
+
+  const morphSpecs = [
+    {
+      rx: 38.5,
+      ry: 38.5,
+      cx: 50,
+      cy: 50,
+      radii: [1, 1.02, 0.99, 1.01, 1, 0.98, 1.01, 0.99],
+      angles: [0, 1, -1, 0, 1, -1, 0, 1],
+    },
+    {
+      rx: 41,
+      ry: 36.2,
+      cx: 49.6,
+      cy: 50.2,
+      radii: [0.99, 1.02, 1.01, 0.98, 1.01, 1, 0.99, 1.01],
+      angles: [-1, 1, 0, -2, 1, 2, -1, 0],
+    },
+    {
+      rx: 39.4,
+      ry: 37.6,
+      cx: 49.3,
+      cy: 49.8,
+      radii: [0.98, 1.07, 1.04, 0.98, 0.95, 0.99, 1.02, 0.96],
+      angles: [1, -2, 2, 0, -1, 3, -2, 1],
+    },
+    {
+      rx: 39,
+      ry: 38,
+      cx: 49.4,
+      cy: 50.1,
+      radii: [0.98, 1.03, 1.1, 1, 0.96, 0.98, 0.95, 0.99],
+      angles: [-1, 2, 0, -2, 1, 2, -1, -2],
+    },
+    {
+      rx: 39.7,
+      ry: 37.4,
+      cx: 50.4,
+      cy: 49.7,
+      radii: [1.03, 1.05, 1.03, 1, 0.98, 0.9, 0.94, 1.01],
+      angles: [0, -2, 1, 2, -1, 3, -2, 1],
+    },
+    {
+      rx: 38.8,
+      ry: 38.2,
+      cx: 49.7,
+      cy: 50.4,
+      radii: [1.05, 0.98, 1.07, 1.01, 0.96, 0.94, 1.03, 0.99],
+      angles: [2, -1, 1, -2, 2, 3, -2, 0],
+    },
+    {
+      rx: 36.7,
+      ry: 40.4,
+      cx: 50.2,
+      cy: 49.7,
+      radii: [1.02, 0.98, 1.01, 1.04, 1, 0.96, 0.99, 1.02],
+      angles: [-1, 2, -1, 1, 0, -2, 2, 0],
+    },
+  ];
+
+  function buildMorphState(spec) {
+    const meanRadius = spec.radii.reduce((sum, radius) => sum + radius, 0) / pointCount;
+    return spec.radii.map((radius, index) => {
+      const angleOffset = spec.angles[index] * Math.PI / 180;
+      const angle = -Math.PI / 2 + index * fullTurn / pointCount + angleOffset;
+      const normalizedRadius = radius / meanRadius;
+      return {
+        x: spec.cx + Math.cos(angle) * spec.rx * normalizedRadius,
+        y: spec.cy + Math.sin(angle) * spec.ry * normalizedRadius,
+      };
+    });
+  }
+
+  const morphStates = morphSpecs.map(buildMorphState);
+  const renderedPoints = morphStates[0].map(point => ({ x: point.x, y: point.y }));
+  const pointerTarget = { x: 0, y: 0, strength: 0, svgX: 50, svgY: 50 };
+  const pointerCurrent = { x: 0, y: 0, strength: 0, svgX: 50, svgY: 50 };
+  const hoverPoint = { x: 50, y: 50, nx: 0, ny: 0 };
+  const eventPoint = { x: 50, y: 50, nx: 0, ny: 0 };
+  const clickPoint = { x: 50, y: 50 };
+  const bodyLightTransform = "translate(29 27) rotate(48) scale(67 72)";
+  let lastBodyLightTransform = bodyLightTransform;
+  const lastMotionStyle = {
+    shiftX: Number.POSITIVE_INFINITY,
+    shiftY: Number.POSITIVE_INFINITY,
+    coreX: Number.POSITIVE_INFINITY,
+    coreY: Number.POSITIVE_INFINITY,
+    particlesX: Number.POSITIVE_INFINITY,
+    particlesY: Number.POSITIVE_INFINITY,
+  };
+
+  const readySpeech = {
+    text: "Pronto para me conhecer?",
+    reaction: "is-speaking-ready",
+  };
+  const clickSpeeches = [
+    {
+      text: "Vamos organizar suas rotas?",
+      reaction: "is-speaking-routes",
+    },
+    {
+      text: "Quer ver o ROUTflex pensando?",
+      reaction: "is-speaking-thinking",
+    },
+    {
+      text: "Vamos encontrar uma rota melhor?",
+      reaction: "is-speaking-scan",
+    },
+    {
+      text: "Posso transformar seus dados em decisões.",
+      reaction: "",
+    },
+    {
+      text: "Seus dados têm algo para me contar.",
+      reaction: "",
+    },
+  ];
+
+  let fromStateIndex = 0;
+  let toStateIndex = 1;
+  let previousStateIndex = -1;
+  let morphElapsed = 0;
+  let morphDuration = randomMorphDuration();
+  let clickElapsed = Number.POSITIVE_INFINITY;
+  let clickSpeechIndex = 0;
+  let lastSpeechAt = Number.NEGATIVE_INFINITY;
+  let firstHoverSpoken = false;
+  let hasInteracted = false;
+  let pointerInside = false;
+  let hoverActive = false;
+  let isInView = false;
+  let frameInterval = smallScreenQuery.matches ? 1000 / 24 : 1000 / 36;
+  let frameId = null;
+  let lastFrameAt = 0;
+  let frameAccumulator = 0;
+  let hoverTimer = null;
+  let returnTimer = null;
+  let clickTimer = null;
+  let rippleTimer = null;
+  let messageTimer = null;
+  let reactionTimer = null;
+
+  function randomMorphDuration() {
+    return 10000 + Math.random() * 6000;
+  }
+
+  function chooseNextState() {
+    let candidate = toStateIndex;
+    while (candidate === toStateIndex || candidate === previousStateIndex) {
+      candidate = Math.floor(Math.random() * morphStates.length);
+    }
+    return candidate;
+  }
+
+  function easeInOutCubic(progress) {
+    return progress < 0.5
+      ? 4 * progress * progress * progress
+      : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+  }
+
+  function formatPathNumber(value) {
+    const safeValue = Math.abs(value) < 0.005 ? 0 : value;
+    return safeValue.toFixed(2);
+  }
+
+  function createSmoothPath(points) {
+    const tension = 0.9;
+    let path = `M${formatPathNumber(points[0].x)} ${formatPathNumber(points[0].y)}`;
+
+    for (let index = 0; index < pointCount; index += 1) {
+      const previous = points[(index - 1 + pointCount) % pointCount];
+      const current = points[index];
+      const next = points[(index + 1) % pointCount];
+      const afterNext = points[(index + 2) % pointCount];
+      const controlOneX = current.x + (next.x - previous.x) * tension / 6;
+      const controlOneY = current.y + (next.y - previous.y) * tension / 6;
+      const controlTwoX = next.x - (afterNext.x - current.x) * tension / 6;
+      const controlTwoY = next.y - (afterNext.y - current.y) * tension / 6;
+
+      path += `C${formatPathNumber(controlOneX)} ${formatPathNumber(controlOneY)} `;
+      path += `${formatPathNumber(controlTwoX)} ${formatPathNumber(controlTwoY)} `;
+      path += `${formatPathNumber(next.x)} ${formatPathNumber(next.y)}`;
+    }
+
+    return `${path}Z`;
+  }
+
+  function writeShape(points) {
+    const path = createSmoothPath(points);
+    shapeNodes.forEach(node => node.setAttribute("d", path));
+  }
+
+  function composeShape(progress) {
+    const fromState = morphStates[fromStateIndex];
+    const toState = morphStates[toStateIndex];
+    const easedProgress = easeInOutCubic(progress);
+    const clickProgress = Math.min(clickElapsed / 1500, 1);
+    const clickCompression = Math.exp(-clickElapsed / 260);
+    const clickWave = Math.sin(Math.PI * clickProgress) * (1 - clickProgress) * 0.62;
+    const clickWaveRadius = clickProgress * 62;
+
+    for (let index = 0; index < pointCount; index += 1) {
+      const fromPoint = fromState[index];
+      const toPoint = toState[index];
+      let x = fromPoint.x + (toPoint.x - fromPoint.x) * easedProgress;
+      let y = fromPoint.y + (toPoint.y - fromPoint.y) * easedProgress;
+
+      if (pointerCurrent.strength > 0.001) {
+        const pointerDistanceX = x - pointerCurrent.svgX;
+        const pointerDistanceY = y - pointerCurrent.svgY;
+        const pointerWeight = Math.exp(
+          -(pointerDistanceX * pointerDistanceX + pointerDistanceY * pointerDistanceY) / 430
+        );
+        const pointerCompression = pointerWeight * pointerCurrent.strength * 0.035;
+        x += (50 - x) * pointerCompression + pointerCurrent.x * pointerCurrent.strength * 0.28;
+        y += (50 - y) * pointerCompression + pointerCurrent.y * pointerCurrent.strength * 0.28;
+      }
+
+      if (clickProgress < 1) {
+        const clickDistanceX = x - clickPoint.x;
+        const clickDistanceY = y - clickPoint.y;
+        const clickDistanceSquared =
+          clickDistanceX * clickDistanceX + clickDistanceY * clickDistanceY;
+        const clickDistance = Math.sqrt(clickDistanceSquared) || 1;
+        const clickWeight = Math.exp(-clickDistanceSquared / 480);
+        const waveFrontDistance = clickDistance - clickWaveRadius;
+        const surfaceWave =
+          Math.exp(-(waveFrontDistance * waveFrontDistance) / 120) * clickWave;
+
+        x += (50 - x) * clickCompression * 0.012;
+        y += (50 - y) * clickCompression * 0.012;
+        x += (clickPoint.x - x) * clickWeight * clickCompression * 0.018;
+        y += (clickPoint.y - y) * clickWeight * clickCompression * 0.018;
+        x += clickDistanceX / clickDistance * surfaceWave;
+        y += clickDistanceY / clickDistance * surfaceWave;
+      }
+
+      renderedPoints[index].x = x;
+      renderedPoints[index].y = y;
+    }
+  }
+
+  function updateInteraction(delta) {
+    const responseTime = pointerTarget.strength > pointerCurrent.strength ? 145 : 680;
+    const follow = 1 - Math.exp(-delta / responseTime);
+    pointerCurrent.x += (pointerTarget.x - pointerCurrent.x) * follow;
+    pointerCurrent.y += (pointerTarget.y - pointerCurrent.y) * follow;
+    pointerCurrent.svgX += (pointerTarget.svgX - pointerCurrent.svgX) * follow;
+    pointerCurrent.svgY += (pointerTarget.svgY - pointerCurrent.svgY) * follow;
+    pointerCurrent.strength +=
+      (pointerTarget.strength - pointerCurrent.strength) * follow;
+
+    if (pointerTarget.strength === 0 && pointerCurrent.strength < 0.001) {
+      pointerTarget.x = 0;
+      pointerTarget.y = 0;
+      pointerTarget.svgX = 50;
+      pointerTarget.svgY = 50;
+      pointerCurrent.x = 0;
+      pointerCurrent.y = 0;
+      pointerCurrent.strength = 0;
+      pointerCurrent.svgX = 50;
+      pointerCurrent.svgY = 50;
+    }
+
+    const shiftX = pointerCurrent.x * pointerCurrent.strength * 1.35;
+    const shiftY = pointerCurrent.y * pointerCurrent.strength * 1.15;
+    setMotionStyle("--routex-shift-x", "shiftX", shiftX);
+    setMotionStyle("--routex-shift-y", "shiftY", shiftY);
+    setMotionStyle("--routex-core-x", "coreX", shiftX * 0.35);
+    setMotionStyle("--routex-core-y", "coreY", shiftY * 0.35);
+    setMotionStyle("--routex-particles-x", "particlesX", -shiftX * 0.45);
+    setMotionStyle("--routex-particles-y", "particlesY", -shiftY * 0.45);
+  }
+
+  function updateBodyLight() {
+    if (!bodyLightGradient) return;
+
+    let transform = bodyLightTransform;
+    if (clickElapsed < 1500) {
+      const lightEnvelope = Math.exp(-clickElapsed / 520);
+      const lightX = 29 + (50 - clickPoint.x) * 0.055 * lightEnvelope;
+      const lightY = 27 + (50 - clickPoint.y) * 0.055 * lightEnvelope;
+      transform =
+        `translate(${lightX.toFixed(2)} ${lightY.toFixed(2)}) rotate(48) scale(67 72)`;
+    }
+
+    if (transform === lastBodyLightTransform) return;
+    lastBodyLightTransform = transform;
+    bodyLightGradient.setAttribute("gradientTransform", transform);
+  }
+
+  function setMotionStyle(property, key, value) {
+    if (Math.abs(lastMotionStyle[key] - value) < 0.01) return;
+    lastMotionStyle[key] = value;
+    life.style.setProperty(property, `${value.toFixed(2)}px`);
+  }
+
+  function animate(now) {
+    frameId = null;
+    if (!shouldAnimate()) return;
+
+    if (!lastFrameAt) lastFrameAt = now;
+    const elapsedSinceFrame = now - lastFrameAt;
+    lastFrameAt = now;
+    frameAccumulator += Math.min(elapsedSinceFrame, 80);
+    if (frameAccumulator < frameInterval) {
+      frameId = window.requestAnimationFrame(animate);
+      return;
+    }
+
+    const delta = frameInterval;
+    frameAccumulator = Math.max(0, frameAccumulator - frameInterval);
+    morphElapsed += delta;
+    clickElapsed += delta;
+
+    if (morphElapsed >= morphDuration) {
+      morphElapsed %= morphDuration;
+      previousStateIndex = fromStateIndex;
+      fromStateIndex = toStateIndex;
+      toStateIndex = chooseNextState();
+      morphDuration = randomMorphDuration();
+      life.dataset.morphState = String(toStateIndex);
+    }
+
+    updateInteraction(delta);
+    composeShape(morphElapsed / morphDuration);
+    updateBodyLight();
+    writeShape(renderedPoints);
+    frameId = window.requestAnimationFrame(animate);
+  }
+
+  function shouldAnimate() {
+    return isInView && !document.hidden && !reduceMotionQuery.matches;
+  }
+
+  function syncMotionState() {
+    const isActive = shouldAnimate();
+    showcase.classList.toggle("is-routex-paused", !isActive && !reduceMotionQuery.matches);
+    life.dataset.motion = reduceMotionQuery.matches
+      ? "reduced"
+      : isActive
+        ? "active"
+        : "paused";
+
+    if (reduceMotionQuery.matches) {
+      if (frameId !== null) window.cancelAnimationFrame(frameId);
+      frameId = null;
+      lastFrameAt = 0;
+      frameAccumulator = 0;
+      clickElapsed = Number.POSITIVE_INFINITY;
+      pointerTarget.x = 0;
+      pointerTarget.y = 0;
+      pointerTarget.strength = 0;
+      pointerTarget.svgX = 50;
+      pointerTarget.svgY = 50;
+      pointerCurrent.x = 0;
+      pointerCurrent.y = 0;
+      pointerCurrent.strength = 0;
+      pointerCurrent.svgX = 50;
+      pointerCurrent.svgY = 50;
+      life.style.setProperty("--routex-shift-x", "0px");
+      life.style.setProperty("--routex-shift-y", "0px");
+      life.style.setProperty("--routex-core-x", "0px");
+      life.style.setProperty("--routex-core-y", "0px");
+      life.style.setProperty("--routex-particles-x", "0px");
+      life.style.setProperty("--routex-particles-y", "0px");
+      if (bodyLightGradient) {
+        lastBodyLightTransform = bodyLightTransform;
+        bodyLightGradient.setAttribute("gradientTransform", bodyLightTransform);
+      }
+      writeShape(morphStates[0]);
+      return;
+    }
+
+    if (isActive && frameId === null) {
+      lastFrameAt = 0;
+      frameAccumulator = 0;
+      frameId = window.requestAnimationFrame(animate);
+    } else if (!isActive && frameId !== null) {
+      window.cancelAnimationFrame(frameId);
+      frameId = null;
+      lastFrameAt = 0;
+      frameAccumulator = 0;
+    }
+  }
+
+  function readLocalPoint(event, target, allowKeyboardCenter = false) {
+    if (
+      allowKeyboardCenter &&
+      (event.detail === 0 || (event.clientX === 0 && event.clientY === 0))
+    ) {
+      target.x = 50;
+      target.y = 50;
+      target.nx = 0;
+      target.ny = 0;
+      return true;
+    }
+
+    const bounds = life.getBoundingClientRect();
+    if (!bounds.width || !bounds.height) return false;
+    const relativeX = (event.clientX - bounds.left) / bounds.width;
+    const relativeY = (event.clientY - bounds.top) / bounds.height;
+    const normalizedX = (relativeX - 0.5) / 0.47;
+    const normalizedY = (relativeY - 0.5) / 0.47;
+    if (normalizedX * normalizedX + normalizedY * normalizedY > 1) return false;
+
+    target.x = Math.min(94, Math.max(6, relativeX * 100));
+    target.y = Math.min(94, Math.max(6, relativeY * 100));
+    target.nx = Math.min(1, Math.max(-1, (relativeX - 0.5) * 2));
+    target.ny = Math.min(1, Math.max(-1, (relativeY - 0.5) * 2));
+    return true;
+  }
+
+  function setPointerTarget(point, strength) {
+    pointerTarget.x = point.nx;
+    pointerTarget.y = point.ny;
+    pointerTarget.svgX = point.x;
+    pointerTarget.svgY = point.y;
+    pointerTarget.strength = strength;
+  }
+
+  function clearReaction() {
+    reactionClasses.forEach(className => life.classList.remove(className));
+  }
+
+  function showSpeech(speech) {
+    const now = performance.now();
+    if (now - lastSpeechAt < 9000) return false;
+
+    window.clearTimeout(messageTimer);
+    window.clearTimeout(reactionTimer);
+    clearReaction();
+    message.classList.remove("is-visible");
+    message.textContent = speech.text;
+    if (speech.reaction && !reduceMotionQuery.matches) {
+      life.classList.add(speech.reaction);
+    }
+    window.requestAnimationFrame(() => message.classList.add("is-visible"));
+    lastSpeechAt = now;
+
+    reactionTimer = window.setTimeout(clearReaction, 3000);
+    messageTimer = window.setTimeout(() => {
+      message.classList.remove("is-visible");
+      window.setTimeout(() => {
+        if (!message.classList.contains("is-visible")) message.textContent = "";
+      }, 480);
+    }, 3200);
+    return true;
+  }
+
+  function beginHover() {
+    if (!pointerInside || hoverActive || !finePointerQuery.matches) return;
+    hoverActive = true;
+    life.classList.remove("is-returning");
+    life.classList.add("is-hovered");
+    if (!reduceMotionQuery.matches) setPointerTarget(hoverPoint, 1);
+
+    if (!hasInteracted && !firstHoverSpoken && showSpeech(readySpeech)) {
+      firstHoverSpoken = true;
+    }
+  }
+
+  function scheduleHover() {
+    if (hoverActive || hoverTimer !== null || !finePointerQuery.matches) return;
+    hoverTimer = window.setTimeout(() => {
+      hoverTimer = null;
+      beginHover();
+    }, 400);
+  }
+
+  function endHover() {
+    pointerInside = false;
+    window.clearTimeout(hoverTimer);
+    window.clearTimeout(returnTimer);
+    hoverTimer = null;
+    hoverActive = false;
+    life.classList.remove("is-hovered");
+    life.classList.add("is-returning");
+    pointerTarget.strength = 0;
+    returnTimer = window.setTimeout(() => life.classList.remove("is-returning"), 1400);
+  }
+
+  function restartRipple() {
+    if (!ripple || reduceMotionQuery.matches) return;
+    window.clearTimeout(rippleTimer);
+    ripple.classList.remove("is-active");
+    void ripple.offsetWidth;
+    ripple.classList.add("is-active");
+    rippleTimer = window.setTimeout(() => ripple.classList.remove("is-active"), 1500);
+  }
+
+  function triggerClick(point) {
+    hasInteracted = true;
+    firstHoverSpoken = true;
+    window.clearTimeout(hoverTimer);
+    hoverTimer = null;
+    clickPoint.x = point.x;
+    clickPoint.y = point.y;
+    clickElapsed = reduceMotionQuery.matches ? Number.POSITIVE_INFINITY : 0;
+    life.style.setProperty("--routex-ripple-x", `${point.x.toFixed(2)}%`);
+    life.style.setProperty("--routex-ripple-y", `${point.y.toFixed(2)}%`);
+
+    window.clearTimeout(clickTimer);
+    life.classList.remove("is-clicked");
+    if (!reduceMotionQuery.matches) {
+      life.classList.add("is-clicked");
+      restartRipple();
+      clickTimer = window.setTimeout(() => life.classList.remove("is-clicked"), 1500);
+    }
+
+    const speech = clickSpeeches[clickSpeechIndex];
+    if (showSpeech(speech)) {
+      clickSpeechIndex = (clickSpeechIndex + 1) % clickSpeeches.length;
+    }
+  }
+
+  life.addEventListener("pointerenter", event => {
+    if (!finePointerQuery.matches) return;
+    const isInside = readLocalPoint(event, hoverPoint);
+    life.classList.toggle("is-hit-outside", !isInside);
+    if (!isInside) return;
+    pointerInside = true;
+    scheduleHover();
+  });
+
+  life.addEventListener("pointermove", event => {
+    if (!finePointerQuery.matches) return;
+    const isInside = readLocalPoint(event, hoverPoint);
+    life.classList.toggle("is-hit-outside", !isInside);
+    if (!isInside) {
+      if (pointerInside || hoverActive) endHover();
+      return;
+    }
+
+    pointerInside = true;
+    if (hoverActive) setPointerTarget(hoverPoint, 1);
+    else scheduleHover();
+  }, { passive: true });
+
+  life.addEventListener("pointerleave", () => {
+    life.classList.remove("is-hit-outside");
+    endHover();
+  });
+  life.addEventListener("pointercancel", endHover);
+  life.addEventListener("click", event => {
+    if (!readLocalPoint(event, eventPoint, true)) return;
+    triggerClick(eventPoint);
+  });
+
+  const visibilityObserver = new IntersectionObserver(([entry]) => {
+    isInView = entry.isIntersecting;
+    syncMotionState();
+  }, {
+    threshold: 0.08,
+    rootMargin: "120px 0px",
+  });
+
+  visibilityObserver.observe(showcase);
+  document.addEventListener("visibilitychange", syncMotionState);
+  reduceMotionQuery.addEventListener?.("change", syncMotionState);
+  smallScreenQuery.addEventListener?.("change", event => {
+    frameInterval = event.matches ? 1000 / 24 : 1000 / 36;
+  });
+
+  writeShape(morphStates[0]);
+  life.dataset.morphState = String(toStateIndex);
+  life.dataset.routexReady = "true";
+  showcase.classList.add("is-routex-paused");
+})();
+
 /* ---- REVEAL ON SCROLL ---- */
 
 // Stagger grid children so they cascade in with coordinated delays
@@ -1000,6 +1611,64 @@ const revealObserver = new IntersectionObserver(
 document.querySelectorAll(".reveal").forEach(el => {
   if (!staggeredEls.has(el)) revealObserver.observe(el);
 });
+
+/* ---- MODULE REVEAL — Planning/Sales lateral entrance, scroll-scrubbed (GSAP) ---- */
+(function initModuleReveals() {
+  if (typeof window.gsap === "undefined" || typeof window.ScrollTrigger === "undefined") return;
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+  // Registered defensively — cinematic.js only registers the plugin when its own
+  // stage goes interactive (skipped on narrow/reduced-motion), so this can't assume
+  // that already happened. gsap.registerPlugin is idempotent.
+  gsap.registerPlugin(ScrollTrigger);
+
+  const isNarrow = window.matchMedia("(max-width: 640px)").matches;
+  const mediaShift = isNarrow ? 28 : 80;
+  const textShift = isNarrow ? 12 : 26;
+
+  const configs = [
+    { section: ".module-planning-section", media: ".rfx-planning-reveal-media", copy: ".rfx-planning-reveal-copy", mediaFrom: mediaShift },
+    { section: ".module-sales-section",    media: ".rfx-sales-reveal-media",    copy: ".rfx-sales-reveal-copy",    mediaFrom: -mediaShift },
+  ];
+
+  configs.forEach(cfg => {
+    const section = document.querySelector(cfg.section);
+    const media = section?.querySelector(cfg.media);
+    const copy = section?.querySelector(cfg.copy);
+    if (!section || !media) return;
+
+    const textFrom = cfg.mediaFrom > 0 ? -textShift : textShift;
+
+    // scrub (not once/onEnter) ties progress directly to scroll position, so the
+    // reveal advances/reverses continuously with the scrollbar in both directions
+    // and always reflects the real scroll position (including on reload mid-page).
+    const tl = gsap.timeline({
+      scrollTrigger: {
+        trigger: section,
+        start: "top 85%",
+        end: "top 35%",
+        scrub: 0.8,
+      },
+    });
+
+    tl.fromTo(media,
+      { autoAlpha: 0, x: cfg.mediaFrom, scale: 0.98 },
+      { autoAlpha: 1, x: 0, scale: 1, ease: "none", duration: 1 },
+      0
+    );
+    if (copy) {
+      tl.fromTo(copy,
+        { opacity: 0.4, x: textFrom },
+        { opacity: 1, x: 0, ease: "none", duration: 1 },
+        0
+      );
+    }
+  });
+
+  // Layout can still settle a frame after this (webfonts/late-measured boxes); one
+  // refresh once the page is fully loaded keeps trigger positions accurate — no polling.
+  window.addEventListener("load", () => ScrollTrigger.refresh(), { once: true });
+})();
 
 /* ---- METRICS COUNTER ---- */
 (function initMetricsCounter() {
