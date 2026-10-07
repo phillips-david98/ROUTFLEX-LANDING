@@ -24,6 +24,8 @@
     MEMBER_SUSPEND: "core.member.suspend",
     MEMBER_REACTIVATE: "core.member.reactivate",
     ROLE_READ: "core.role.read",
+    ROLE_ASSIGN: "core.member.assign_role",
+    ROLE_REVOKE: "core.member.revoke_role",
     ENTITLEMENT_READ: "core.entitlement.read",
     SEAT_READ: "core.seat.read",
     SEAT_ASSIGN: "core.seat.assign",
@@ -561,8 +563,9 @@
 
       const rowActions = [];
       if (canSeats) rowActions.push(`<button class="secondary btn-mini" type="button" data-action="member-seats" data-membership-id="${escapeHtml(member.membershipId)}">Licenças</button>`);
+      if (can(PERM.ROLE_READ) && (can(PERM.ROLE_ASSIGN) || can(PERM.ROLE_REVOKE))) rowActions.push(`<button class="secondary btn-mini" type="button" data-action="member-roles" data-membership-id="${escapeHtml(member.membershipId)}">Papéis</button>`);
       const isSelf = state.me && member.user.id === state.me.user.id;
-      if (!isSelf && member.status === "ACTIVE" && can(PERM.MEMBER_SUSPEND)) {
+      if (!isSelf && !member.isTenantOwner && member.status === "ACTIVE" && can(PERM.MEMBER_SUSPEND)) {
         rowActions.push(`<button class="secondary btn-mini" type="button" data-action="member-suspend" data-membership-id="${escapeHtml(member.membershipId)}">Suspender</button>`);
       }
       if (member.status === "SUSPENDED" && can(PERM.MEMBER_REACTIVATE)) {
@@ -571,7 +574,7 @@
 
       return `
         <tr>
-          <td><strong>${escapeHtml(member.user.fullName)}</strong><br><span class="ws-dim">${escapeHtml(member.user.email)}</span></td>
+          <td><strong>${escapeHtml(member.user.fullName)}</strong> ${member.isTenantOwner ? badge("active", "OWNER") : ""}<br><span class="ws-dim">${escapeHtml(member.user.email)}</span></td>
           <td>${escapeHtml(member.roles.map((role) => role.name).join(", ") || "—")}</td>
           <td>${seatPills}</td>
           <td>${badge(MEMBER_TONE[member.status] || "notc", memberStatusLabel)}</td>
@@ -603,8 +606,9 @@
   function renderInvitations() {
     const container = $("invitesBlock");
     const pending = (state.invitations || []).filter((invite) => invite.status === "PENDING");
-    const others = (state.invitations || []).filter((invite) => invite.status !== "PENDING").slice(0, 3);
-    const list = pending.concat(others);
+    const recoverable = (state.invitations || []).filter((invite) => invite.status === "EXPIRED" && invite.hasReservedSeats);
+    const others = (state.invitations || []).filter((invite) => invite.status !== "PENDING" && !recoverable.includes(invite)).slice(0, 3);
+    const list = pending.concat(recoverable, others);
 
     if (!list.length) {
       container.innerHTML = `<div class="ws-subblock"><h3 class="ws-subtitle">Convites</h3>${emptyCard("Nenhum convite registrado.")}</div>`;
@@ -613,8 +617,8 @@
 
     const rows = list.map((invite) => {
       const label = LABELS.invitationStatus[invite.status] || invite.status;
-      const revokeButton = invite.status === "PENDING" && can(PERM.INVITATION_REVOKE)
-        ? `<button class="secondary btn-mini" type="button" data-action="invite-revoke" data-invitation-id="${escapeHtml(invite.id)}" data-email="${escapeHtml(invite.email)}">Revogar</button>`
+      const revokeButton = (invite.status === "PENDING" || (invite.status === "EXPIRED" && invite.hasReservedSeats)) && can(PERM.INVITATION_REVOKE)
+        ? `<button class="secondary btn-mini" type="button" data-action="invite-revoke" data-invitation-id="${escapeHtml(invite.id)}" data-email="${escapeHtml(invite.email)}">${invite.status === "EXPIRED" ? "Liberar reserva" : "Revogar"}</button>`
         : "—";
       return `
         <tr>
@@ -684,7 +688,8 @@
         return `
           <div class="ws-seat-row">
             <span class="ws-seat-name">${escapeHtml(LABELS.seatType[quota.seatTypeKey] || quota.seatTypeKey)}</span>
-            <strong>${quota.occupied} / ${quota.ceiling}</strong>
+            <strong>${quota.contracted} contratados / ${quota.occupied} utilizados</strong>
+            <span class="ws-dim">${quota.available} disponíveis · teto ${quota.ceiling}</span>
             <em class="ws-bar${full ? " is-full" : ""}${quota.inOverage ? " is-over" : ""}"><i style="width:${width}%"></i></em>
             ${full ? badge("suspended", "Limite atingido") : (quota.inOverage ? badge("paused", "Em excedente") : "")}
           </div>`;
@@ -844,13 +849,13 @@
         title: "Convite criado",
         body: `
           <p>Convite registrado para <strong>${escapeHtml(email)}</strong>.</p>
-          <p class="ws-token-warning">O token abaixo é exibido <strong>uma única vez</strong>. Copie e envie ao convidado por canal seguro.</p>
-          <div class="ws-token-box"><code id="inviteTokenValue">${escapeHtml(result.token)}</code><button class="secondary btn-mini" type="button" data-action="copy-token">Copiar</button></div>
+          <p class="ws-token-warning">O link abaixo é exibido <strong>uma única vez</strong>. Copie e envie ao convidado por canal seguro.</p>
+          <div class="ws-token-box"><code id="inviteTokenValue">${escapeHtml(Core.invitationUrl(result.token, state.tenantId))}</code><button class="secondary btn-mini" type="button" data-action="copy-token">Copiar link</button></div>
           <p class="ws-dim">Expira em ${fmtDate(result.invitation?.expiresAt)}.</p>`,
         actions: `<button type="button" data-ws-modal-close>Concluir</button>`,
       });
       toast("Convite criado com sucesso.");
-      loadInvitations();
+      await Promise.all([loadInvitations(), loadSeats()]);
     } catch (error) {
       errorEl.textContent = Core.friendlyError(error);
       errorEl.hidden = false;
@@ -893,6 +898,42 @@
         <button class="secondary" type="button" data-ws-modal-close>Fechar</button>
         ${can(PERM.SEAT_ASSIGN) && effectiveModules.length ? `<button type="button" data-action="assign-seat" data-membership-id="${escapeHtml(membershipId)}">Atribuir licença</button>` : ""}`,
     });
+  }
+
+  function openRoleModal(membershipId) {
+    const member = memberById(membershipId);
+    if (!member) return;
+    const assigned = new Set(member.roles.map((role) => role.id));
+    const rows = (state.roles || []).map((role) => {
+      const hasRole = assigned.has(role.id);
+      const protectedRole = member.isTenantOwner && role.key === "TENANT_ADMIN";
+      const allowed = hasRole ? can(PERM.ROLE_REVOKE) : can(PERM.ROLE_ASSIGN);
+      return `<div class="ws-seat-row"><span class="ws-seat-name">${escapeHtml(role.name)} ${hasRole ? badge("active", "Atribuído") : ""}</span>
+        ${protectedRole ? `<span class="ws-dim">Autoridade do OWNER preservada</span>` : allowed ? `<button class="secondary btn-mini" type="button" data-action="${hasRole ? "revoke-role" : "grant-role"}" data-membership-id="${escapeHtml(membershipId)}" data-role-id="${escapeHtml(role.id)}">${hasRole ? "Revogar" : "Atribuir"}</button>` : ""}</div>`;
+    }).join("");
+    openModal({ title: `Papéis — ${member.user.fullName}`, body: `<p>Os papéis valem somente nesta empresa. OWNER é designado pela plataforma.</p>${rows || emptyCard("Nenhum papel disponível.")}<p class="ws-form-error" id="roleError" role="alert" hidden></p>`, actions: `<button class="secondary" type="button" data-ws-modal-close>Fechar</button>` });
+  }
+
+  async function changeMemberRole(membershipId, roleId, grant, button) {
+    button.disabled = true;
+    try {
+      if (grant) await api.tenantGrantRole(state.tenantId, membershipId, roleId);
+      else await api.tenantRevokeRole(state.tenantId, membershipId, roleId);
+      const isSelf = state.me && memberById(membershipId)?.user.id === state.me.user.id;
+      if (isSelf) {
+        state.context = await api.meContext(state.tenantId);
+        renderContext();
+      }
+      await loadTeam();
+      toast(grant ? "Papel atribuído." : "Papel revogado.");
+      if (can(PERM.ROLE_READ) && (can(PERM.ROLE_ASSIGN) || can(PERM.ROLE_REVOKE))) openRoleModal(membershipId);
+      else closeModal();
+      loadSecurity();
+    } catch (error) {
+      const line = $("roleError");
+      if (line) { line.textContent = Core.friendlyError(error); line.hidden = false; }
+      button.disabled = false;
+    }
   }
 
   async function assignSeat(membershipId) {
@@ -960,7 +1001,7 @@
       await api.tenantSuspendMember(state.tenantId, membershipId, reason);
       toast("Usuário suspenso.");
       closeModal();
-      loadTeam();
+      await Promise.all([loadTeam(), loadSeats()]);
     } catch (error) {
       errorEl.textContent = Core.friendlyError(error);
       errorEl.hidden = false;
@@ -978,21 +1019,22 @@
   }
 
   function openRevokeInviteModal(invitationId, email) {
+    const expired = (state.invitations || []).find((invite) => invite.id === invitationId)?.status === "EXPIRED";
     openModal({
-      title: "Revogar convite?",
-      body: `<p>O convite para <strong>${escapeHtml(email)}</strong> deixará de ser válido imediatamente.</p>`,
+      title: expired ? "Liberar reserva de convite expirado?" : "Revogar convite?",
+      body: expired ? `<p>As licenças reservadas serão devolvidas à empresa. O convite permanece expirado.</p>` : `<p>O convite para <strong>${escapeHtml(email)}</strong> deixará de ser válido imediatamente.</p>`,
       actions: `
         <button class="secondary" type="button" data-ws-modal-close>Cancelar</button>
-        <button type="button" data-action="confirm-revoke-invite" data-invitation-id="${escapeHtml(invitationId)}">Revogar convite</button>`,
+        <button type="button" data-action="confirm-revoke-invite" data-invitation-id="${escapeHtml(invitationId)}">${expired ? "Liberar reserva" : "Revogar convite"}</button>`,
     });
   }
 
   async function confirmRevokeInvite(invitationId) {
     try {
       await api.tenantRevokeInvitation(state.tenantId, invitationId);
-      toast("Convite revogado.");
+      toast("Convite encerrado; eventuais reservas foram liberadas.");
       closeModal();
-      loadInvitations();
+      await Promise.all([loadInvitations(), loadSeats()]);
     } catch (error) {
       toast(Core.friendlyError(error), "danger");
     }
@@ -1021,6 +1063,9 @@
       case "open-invite": openInviteModal(); break;
       case "submit-invite": submitInvite(); break;
       case "member-seats": openSeatModal(target.dataset.membershipId); break;
+      case "member-roles": openRoleModal(target.dataset.membershipId); break;
+      case "grant-role": changeMemberRole(target.dataset.membershipId, target.dataset.roleId, true, target); break;
+      case "revoke-role": changeMemberRole(target.dataset.membershipId, target.dataset.roleId, false, target); break;
       case "assign-seat": assignSeat(target.dataset.membershipId); break;
       case "release-seat": releaseSeat(target.dataset.membershipId, target.dataset.seatId); break;
       case "member-suspend": openSuspendMemberModal(target.dataset.membershipId); break;
@@ -1030,7 +1075,7 @@
       case "confirm-revoke-invite": confirmRevokeInvite(target.dataset.invitationId); break;
       case "copy-token": {
         const token = $("inviteTokenValue")?.textContent || "";
-        navigator.clipboard?.writeText(token).then(() => toast("Token copiado."), () => toast("Não foi possível copiar automaticamente.", "warning"));
+        navigator.clipboard?.writeText(token).then(() => toast("Link copiado."), () => toast("Não foi possível copiar automaticamente.", "warning"));
         break;
       }
       default: break;

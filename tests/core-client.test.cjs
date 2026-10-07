@@ -6,6 +6,53 @@ const vm = require('node:vm');
 
 const source = fs.readFileSync(path.join(__dirname, '..', 'core-client.js'), 'utf8');
 
+test('contratos administrativos usam autoridade e tenant da rota, sem conceder roles no browser', async () => {
+  const calls = [];
+  const { Core } = client(async (url, options) => { calls.push({ url, options }); return reply(200, {}); });
+  Core.setToken('admin-access');
+  await Core.api.adminUpdateTenant('tenant-a', { displayName: 'Empresa A' });
+  await Core.api.adminActivateTenant('tenant-a');
+  await Core.api.adminDesignateOwner('tenant-a', 'owner@example.test');
+  await Core.api.adminTenantRoles('tenant-a');
+  await Core.api.adminTenantMemberships('tenant-a');
+  await Core.api.adminTenantInvitations('tenant-a');
+  await Core.api.adminRevokeInvitation('tenant-a', 'invite-a');
+  assert.deepEqual(calls.map(({ url, options }) => [new URL(url).pathname, options.method]), [
+    ['/core/admin/tenants/tenant-a', 'PATCH'], ['/core/admin/tenants/tenant-a/activate', 'POST'],
+    ['/core/admin/tenants/tenant-a/owner', 'POST'], ['/core/admin/tenants/tenant-a/roles', 'GET'],
+    ['/core/admin/tenants/tenant-a/memberships', 'GET'], ['/core/admin/tenants/tenant-a/invitations', 'GET'],
+    ['/core/admin/tenants/tenant-a/invitations/invite-a/revoke', 'POST'],
+  ]);
+  assert.deepEqual(JSON.parse(calls[2].options.body), { email: 'owner@example.test' });
+  assert.ok(calls.every(({ options }) => options.headers.Authorization === 'Bearer admin-access' && options.credentials === 'omit'));
+});
+
+test('preview e aceite públicos enviam token só no corpo e tenant esperado', async () => {
+  const calls = [];
+  const { Core } = client(async (url, options) => { calls.push({ url, options }); return reply(200, {}); });
+  await Core.api.previewInvitation('test-invite-token', 'tenant-a');
+  await Core.api.acceptInvitation({ token: 'test-invite-token', tenantId: 'tenant-a' });
+  assert.deepEqual(calls.map(({ url }) => new URL(url).pathname), ['/core/invitations/preview', '/core/invitations/accept']);
+  for (const { url, options } of calls) {
+    assert.equal(new URL(url).search, '');
+    assert.equal(options.headers.Authorization, undefined);
+    assert.equal(options.credentials, 'omit');
+    assert.deepEqual(JSON.parse(options.body), { token: 'test-invite-token', tenantId: 'tenant-a' });
+  }
+});
+
+test('links de convite conservam origem e usam apenas fragmento, no Workspace e Control Center', () => {
+  for (const href of ['https://app.example.test/workspace.html?demo=1', 'https://app.example.test/control-center/index.html']) {
+    const { Core } = client(async () => reply(200), { href });
+    const url = new URL(Core.invitationUrl('test-invite-token', 'tenant-a'));
+    assert.equal(url.origin, 'https://app.example.test');
+    assert.equal(url.pathname, '/invitation.html');
+    assert.equal(url.search, '');
+    assert.equal(new URLSearchParams(url.hash.slice(1)).get('token'), 'test-invite-token');
+    assert.equal(new URLSearchParams(url.hash.slice(1)).get('tenantId'), 'tenant-a');
+  }
+});
+
 function storage() {
   const values = new Map();
   return {
@@ -24,11 +71,11 @@ function reply(status, body = null) {
   };
 }
 
-function client(fetch, { sessionStorage = storage(), localStorage = storage(), search = '' } = {}) {
+function client(fetch, { sessionStorage = storage(), localStorage = storage(), search = '', href = 'http://localhost:5500/workspace.html' } = {}) {
   const window = {
     sessionStorage,
     localStorage,
-    location: { search },
+    location: { search, href },
   };
   vm.runInNewContext(source, { window, fetch, URL, URLSearchParams, console });
   return { Core: window.RoutflexCore, window, sessionStorage };

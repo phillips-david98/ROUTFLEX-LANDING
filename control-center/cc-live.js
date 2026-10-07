@@ -68,6 +68,8 @@
     companyTab: "summary",
     detail: null,            // adminGetTenant
     detailEntitlements: null, // adminListEntitlements
+    detailMemberships: null,
+    detailInvitations: null,
     detailLoading: false,
     detailError: null,
     detailAudit: null,
@@ -81,7 +83,6 @@
     auditError: null,
     auditTenantFilter: "all",
     auditDone: false,
-    sessionInvites: [],       // convites emitidos nesta sessão (contrato não expõe listagem à plataforma)
     sidebarCollapsed: false,
   };
 
@@ -295,12 +296,16 @@
     state.detailAudit = null;
     renderView();
     try {
-      const [detail, entitlements] = await Promise.all([
+      const [detail, entitlements, memberships, invitations] = await Promise.all([
         api.adminGetTenant(tenantId),
         api.adminListEntitlements(tenantId),
+        api.adminTenantMemberships(tenantId),
+        api.adminTenantInvitations(tenantId),
       ]);
       state.detail = detail;
       state.detailEntitlements = entitlements;
+      state.detailMemberships = memberships;
+      state.detailInvitations = invitations;
     } catch (error) {
       state.detailError = error;
     } finally {
@@ -554,7 +559,9 @@
           <div><span class="page-kicker">${escapeHtml(tenant.slug)}</span><h1 tabindex="-1">${escapeHtml(tenant.displayName)}</h1><div>${tenantBadge(tenant.status)}</div></div>
         </div>
         <div class="detail-header__actions">
-          <button class="button button--secondary" type="button" data-action="open-invite" data-tenant-id="${tenant.id}">Convidar Tenant Admin</button>
+          <button class="button button--secondary" type="button" data-action="edit-tenant" data-tenant-id="${tenant.id}">Editar empresa</button>
+          <button class="button button--secondary" type="button" data-action="open-owner" data-tenant-id="${tenant.id}">Designar OWNER</button>
+          ${tenant.status === "PROVISIONING" || tenant.status === "TRIAL" ? `<button class="button button--positive" type="button" data-action="activate-tenant" data-tenant-id="${tenant.id}">Ativar empresa</button>` : ""}
           ${isSuspended
             ? `<button class="button button--positive" type="button" data-action="reactivate-tenant" data-tenant-id="${tenant.id}">Reativar empresa</button>`
             : (!isCancelled ? `<button class="button button--danger-ghost" type="button" data-action="suspend-tenant" data-tenant-id="${tenant.id}">Suspender empresa</button>` : "")}
@@ -664,16 +671,16 @@
   }
 
   function renderCompanyInvites(tenant) {
-    const invites = state.sessionInvites.filter((inv) => inv.tenantId === tenant.id);
+    const invites = state.detailInvitations || [];
     return `
       <section class="panel">
         <header class="panel__header">
-          <div><span>Acesso inicial</span><h2>Convites emitidos nesta sessão</h2></div>
+          <div><span>Acesso inicial</span><h2>Convites da empresa</h2></div>
           <button class="button button--primary" type="button" data-action="open-invite" data-tenant-id="${tenant.id}">Novo convite</button>
         </header>
         ${invites.length ? `
           <table class="data-table">
-            <thead><tr><th scope="col">E-mail</th><th scope="col">Status</th><th scope="col">Expira</th><th scope="col">Emitido</th></tr></thead>
+            <thead><tr><th scope="col">E-mail</th><th scope="col">Status</th><th scope="col">Expira</th><th scope="col">Emitido</th><th scope="col">Ação</th></tr></thead>
             <tbody>
               ${invites.map((inv) => `
                 <tr>
@@ -681,25 +688,22 @@
                   <td>${inviteBadge(inv.status)}</td>
                   <td>${formatDate(inv.expiresAt, true)}</td>
                   <td>${formatDate(inv.createdAt, true)}</td>
+                  <td>${inv.status === "PENDING" || (inv.status === "EXPIRED" && inv.hasReservedSeats) ? `<button class="button button--danger-ghost button--table" data-action="revoke-invitation" data-tenant-id="${tenant.id}" data-invitation-id="${escapeHtml(inv.id)}">${inv.status === "EXPIRED" ? "Liberar reserva" : "Revogar"}</button>` : "—"}</td>
                 </tr>
               `).join("")}
             </tbody>
           </table>
-        ` : emptyState("Nenhum convite emitido nesta sessão", "Use “Novo convite” para provisionar o primeiro Tenant Admin da empresa.")}
-        <p class="panel-note">Lacuna de contrato registrada: o Platform Core não expõe listagem de convites para o papel de plataforma (GET /tenants/:id/invitations exige membership). A lista acima cobre apenas convites emitidos nesta sessão do console.</p>
+        ` : emptyState("Nenhum convite registrado", "Designe o OWNER para iniciar o onboarding da empresa.")}
+        <p class="panel-note">Estados consultados no CORE. O link de aceite aparece somente na emissão e deve ser entregue por canal seguro. Para corrigir o destinatário ou substituir um link perdido, revogue o convite pendente e emita outro.</p>
       </section>
     `;
   }
 
   function renderCompanyAccess(tenant) {
-    return gapPanel(
-      "Usuários e acessos da empresa",
-      "A listagem de memberships (GET /tenants/:id/memberships) é um endpoint de escopo do tenant: o contrato exige membership ativa e o papel de plataforma recebe MEMBERSHIP_NOT_FOUND. A gestão de equipe é feita pelo Tenant Admin no Workspace.",
-      `<div class="metric-grid metric-grid--compact" style="margin:14px 0;">
-        <article class="metric-card metric-card--info"><span>Usuários vinculados</span><strong>${tenant._count?.memberships ?? "—"}</strong><small>Contagem oficial via GET /admin/tenants/:id</small></article>
-        <article class="metric-card metric-card--neutral"><span>Unidades</span><strong>${tenant._count?.units ?? "—"}</strong><small>Contagem oficial via GET /admin/tenants/:id</small></article>
-      </div>`
-    );
+    const members = state.detailMemberships || [];
+    return `<section class="panel table-panel"><header class="panel__header"><div><span>Administração</span><h2>Usuários e OWNER</h2></div><button class="button button--secondary" data-action="open-owner" data-tenant-id="${tenant.id}">Designar OWNER</button></header>
+      ${members.length ? `<table class="data-table"><thead><tr><th>Usuário</th><th>Estado</th><th>Papéis</th><th>Licenças</th></tr></thead><tbody>${members.map((member) => `<tr><td><strong>${escapeHtml(member.user.fullName)}</strong> ${member.isTenantOwner ? statusBadge("OWNER") : ""}<br><small>${escapeHtml(member.user.email)}</small></td><td>${escapeHtml(LABELS.membershipStatus[member.status] || member.status)}</td><td>${escapeHtml(member.roles.map((role) => role.name).join(", ") || "—")}</td><td>${escapeHtml(member.seats.filter((seat) => seat.state === "ACTIVE").map((seat) => seat.moduleKey).join(", ") || "—")}</td></tr>`).join("")}</tbody></table>` : emptyState("Nenhum membro", "Designe o OWNER para emitir o convite inicial.")}
+      <p class="panel-note">Um OWNER por empresa nesta versão. A gestão dos demais membros é realizada no Workspace; transferências de OWNER não estão disponíveis.</p></section>`;
   }
 
   function renderCompanyAudit(tenant) {
@@ -817,12 +821,8 @@
 
   function renderOnboarding() {
     return `
-      ${pageHeader("Implantação", "Onboarding", "Pipeline de ativação de novas empresas.")}
-      ${gapPanel(
-        "Pipeline de onboarding",
-        "Não há endpoint de onboarding no contrato. O ciclo de vida oficial disponível é o status do tenant (Provisionando → Trial/Ativa → Suspensa/Cancelada), visível na lista de empresas.",
-        `<div class="table-actions" style="margin-top:14px;"><button class="button button--secondary" type="button" data-view="companies">Ver ciclo de vida nas empresas</button></div>`
-      )}
+      ${pageHeader("Implantação", "Onboarding", "Configure a empresa e entregue o primeiro acesso ao responsável.")}
+      <section class="panel"><ol><li>Crie a empresa e revise os dados administrativos.</li><li>Configure módulos contratados e quotas em “Módulos e licenças”.</li><li>Use “Designar OWNER” e entregue o link de aceite por canal seguro.</li><li>Confira o aceite em “Convites” e o responsável em “Acessos”.</li><li>Ative a empresa. O OWNER administra membros, papéis e licenças no Workspace.</li></ol><div class="table-actions"><button class="button button--primary" data-action="open-create-tenant">Nova empresa</button><button class="button button--secondary" data-view="companies">Continuar em uma empresa</button></div></section>
     `;
   }
 
@@ -1016,6 +1016,90 @@
       fieldError(form, Core.friendlyError(error));
       setBusy(button, false);
     }
+  }
+
+  function openEditTenantModal(tenantId) {
+    const tenant = state.detail;
+    if (!tenant || tenant.id !== tenantId) return;
+    const fields = [
+      ["displayName", "Nome de exibição", 160, true], ["legalName", "Razão social", 200],
+      ["taxIdType", "Tipo de documento", 16], ["taxIdValue", "Documento", 32],
+      ["primaryCountry", "País", 2, true], ["defaultLocale", "Idioma padrão", 16, true],
+      ["defaultTimezone", "Fuso horário", 64, true], ["defaultCurrency", "Moeda", 3, true],
+    ];
+    openModal({ title: "Editar empresa", body: `<form class="form-grid" data-form="edit-tenant" data-tenant-id="${tenant.id}">${fields.map(([name, label, max, required]) => `<label class="form-field">${label}<input name="${name}" maxlength="${max}" value="${escapeHtml(tenant[name] || "")}"${required ? " required" : ""}></label>`).join("")}<p class="form-disclaimer">Identificador da empresa: ${escapeHtml(tenant.slug)}. Alterações registradas em auditoria.</p></form>`, footer: `<button class="button button--secondary" data-action="close-modal">Cancelar</button><button class="button button--primary" data-action="submit-edit-tenant">Salvar empresa</button>` });
+  }
+
+  async function submitEditTenant(button) {
+    const form = modalBody.querySelector('[data-form="edit-tenant"]');
+    if (!form || !form.reportValidity()) return;
+    const fields = ["displayName", "legalName", "taxIdType", "taxIdValue", "primaryCountry", "defaultLocale", "defaultTimezone", "defaultCurrency"];
+    const payload = Object.fromEntries(fields.map((key) => [key, form.elements[key].value.trim()]));
+    ["legalName", "taxIdType", "taxIdValue"].forEach((key) => { if (!payload[key]) payload[key] = null; });
+    setBusy(button, true);
+    try {
+      await api.adminUpdateTenant(form.dataset.tenantId, payload);
+      closeModal();
+      showToast("Empresa atualizada", "success", "Dados administrativos salvos.");
+      await Promise.all([loadTenants(), loadTenantDetail(form.dataset.tenantId)]);
+    } catch (error) { fieldError(form, Core.friendlyError(error)); setBusy(button, false); }
+  }
+
+  function openActivateTenantModal(tenantId) {
+    openModal({ title: "Ativar empresa", body: `<p>A empresa passará a operar como ativa. Módulos e licenças continuam sujeitos à contratação configurada.</p>`, footer: `<button class="button button--secondary" data-action="close-modal">Cancelar</button><button class="button button--positive" data-action="execute-activate-tenant" data-tenant-id="${tenantId}">Ativar</button>` });
+  }
+
+  async function executeActivateTenant(tenantId, button) {
+    setBusy(button, true);
+    try {
+      await api.adminActivateTenant(tenantId);
+      closeModal();
+      showToast("Empresa ativa", "success", "Ativação registrada no CORE.");
+      await Promise.all([loadTenants(), loadTenantDetail(tenantId)]);
+    } catch (error) { showToast("Não foi possível ativar", "error", Core.friendlyError(error)); setBusy(button, false); }
+  }
+
+  function openOwnerModal(tenantId) {
+    const owner = (state.detailMemberships || []).find((member) => member.isTenantOwner);
+    openModal({ title: "Designar OWNER", body: `<form class="form-grid" data-form="owner" data-tenant-id="${tenantId}"><label class="form-field form-field--wide">E-mail do responsável<input name="email" type="email" required value="${escapeHtml(owner?.user.email || "")}"></label><p class="form-disclaimer">${owner ? "Esta empresa já possui um OWNER. Informar o mesmo responsável confirma o estado atual; transferência não está disponível." : "Um membro ativo existente será designado. Para um novo membro, o CORE emitirá convite e concluirá a designação no aceite."} O papel administrativo é definido pelo servidor e vale somente nesta empresa.</p></form>`, footer: `<button class="button button--secondary" data-action="close-modal">Cancelar</button><button class="button button--primary" data-action="submit-owner">Designar OWNER</button>` });
+  }
+
+  function showInvitationLink(result, tenantId) {
+    if (!result.token) {
+      openModal({ kicker: "Convite existente", title: "OWNER aguardando aceite", body: `<p>O convite para <strong>${escapeHtml(result.invitation.email)}</strong> já está registrado como OWNER. Use o link entregue anteriormente.</p><p>O segredo não pode ser recuperado. Se o link foi perdido, revogue o convite em “Convites” e designe o OWNER novamente para emitir outro.</p>`, footer: `<button class="button button--primary" data-action="close-modal">Concluir</button>` });
+      return;
+    }
+    openModal({ kicker: "Convite emitido", title: "Link de aceite — exibido uma única vez", body: `<p>Copie e entregue este link ao responsável por canal seguro.</p><div class="cc-token-box"><code id="cc-invite-token">${escapeHtml(Core.invitationUrl(result.token, tenantId))}</code><button class="button button--secondary" data-action="copy-invite-token">Copiar link</button></div><p>Convite para <strong>${escapeHtml(result.invitation.email)}</strong> · expira em ${formatDate(result.invitation.expiresAt, true)}.</p>`, footer: `<button class="button button--primary" data-action="close-modal">Concluir</button>` });
+  }
+
+  async function submitOwner(button) {
+    const form = modalBody.querySelector('[data-form="owner"]');
+    if (!form || !form.reportValidity()) return;
+    const tenantId = form.dataset.tenantId;
+    setBusy(button, true);
+    try {
+      const result = await api.adminDesignateOwner(tenantId, form.elements.email.value.trim());
+      if (result.status === "INVITED") showInvitationLink(result, tenantId);
+      else { closeModal(); showToast("OWNER confirmado", "success", result.status === "ALREADY_OWNER" ? "O responsável já era OWNER desta empresa." : "Responsável designado com autoridade administrativa nesta empresa."); }
+      await loadTenantDetail(tenantId);
+    } catch (error) { fieldError(form, Core.friendlyError(error)); setBusy(button, false); }
+  }
+
+  function openRevokeInvitationModal(tenantId, invitationId) {
+    const invite = (state.detailInvitations || []).find((item) => item.id === invitationId);
+    if (!invite) return;
+    const expired = invite.status === "EXPIRED";
+    openModal({ title: expired ? "Liberar reserva de convite expirado" : "Revogar convite", body: `<p>${expired ? "As licenças reservadas serão devolvidas à empresa. O convite permanece expirado." : `O link enviado para <strong>${escapeHtml(invite.email)}</strong> deixará de funcionar. Depois você poderá emitir um novo convite.`}</p>`, footer: `<button class="button button--secondary" data-action="close-modal">Cancelar</button><button class="button button--danger" data-action="execute-revoke-invitation" data-tenant-id="${tenantId}" data-invitation-id="${invitationId}">${expired ? "Liberar reserva" : "Revogar convite"}</button>` });
+  }
+
+  async function executeRevokeInvitation(tenantId, invitationId, button) {
+    setBusy(button, true);
+    try {
+      await api.adminRevokeInvitation(tenantId, invitationId);
+      closeModal();
+      showToast("Convite encerrado", "success", "O link anterior não pode ser utilizado e eventuais reservas foram liberadas.");
+      await loadTenantDetail(tenantId);
+    } catch (error) { showToast("Falha ao revogar convite", "error", Core.friendlyError(error)); setBusy(button, false); }
   }
 
   function openSuspendTenantModal(tenantId) {
@@ -1263,17 +1347,15 @@
     const tenant = state.detail?.id === tenantId ? state.detail : state.tenants.find((t) => t.id === tenantId);
     openModal({
       kicker: "Primeiro acesso",
-      title: `Convidar Tenant Admin — ${tenant ? tenant.displayName : ""}`,
+      title: `Convidar membro — ${tenant ? tenant.displayName : ""}`,
       size: "wide",
       body: `<div class="cc-skeleton"><span></span><span></span><span></span></div>`,
       footer: "",
     });
 
-    /* O contrato só expõe papéis com UUID via GET /tenants/:id/roles (escopo do tenant).
-       Tentamos a chamada; a negativa esperada para o papel de plataforma é tratada como lacuna. */
     let rolesField;
     try {
-      const roles = await api.tenantRoles(tenantId);
+      const roles = await api.adminTenantRoles(tenantId);
       rolesField = `
         <div class="form-field form-field--wide">
           <span>Papéis iniciais</span>
@@ -1283,12 +1365,9 @@
         </div>
       `;
     } catch (error) {
-      rolesField = `
-        <label class="form-field form-field--wide">IDs dos papéis iniciais (UUID, um por linha)
-          <textarea name="roleIdsManual" required rows="2" placeholder="uuid do papel TENANT_ADMIN"></textarea>
-          <small class="form-hint">Lacuna de contrato registrada: o catálogo global não expõe UUIDs de papéis e a listagem por tenant exige membership (${escapeHtml(error.code || "PERMISSION_DENIED")}). Informe o UUID do papel gerado no seed/provisionamento.</small>
-        </label>
-      `;
+      modalBody.innerHTML = `<p class="form-error">${escapeHtml(Core.friendlyError(error))}</p>`;
+      modalFooter.innerHTML = `<button class="button button--secondary" data-action="close-modal">Fechar</button>`;
+      return;
     }
 
     modalBody.innerHTML = `
@@ -1297,7 +1376,7 @@
           <input type="email" name="email" required placeholder="admin@empresa.com.br">
         </label>
         ${rolesField}
-        <p class="form-disclaimer">O convite é emitido pelo Platform Core. O token aparece uma única vez — copie e entregue por canal seguro.</p>
+        <p class="form-disclaimer">O convite é emitido pelo Platform Core. O link aparece uma única vez — copie e entregue por canal seguro. Para designar o responsável da empresa, use “Designar OWNER”.</p>
       </form>
     `;
     modalFooter.innerHTML = `
@@ -1310,11 +1389,7 @@
     const form = modalBody.querySelector('[data-form="invite"]');
     if (!form || !form.reportValidity()) return;
     const email = form.querySelector('[name="email"]').value.trim();
-    let roleIds = [...form.querySelectorAll('[name="roleId"]:checked')].map((input) => input.value);
-    const manual = form.querySelector('[name="roleIdsManual"]');
-    if (manual) {
-      roleIds = manual.value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
-    }
+    const roleIds = [...form.querySelectorAll('[name="roleId"]:checked')].map((input) => input.value);
     if (!roleIds.length) {
       fieldError(form, "Informe pelo menos um papel inicial.");
       return;
@@ -1322,28 +1397,9 @@
     setBusy(button, true);
     try {
       const result = await api.adminCreateInvitation(form.dataset.tenantId, { email, intendedRoleIds: roleIds });
-      state.sessionInvites.unshift({
-        tenantId: form.dataset.tenantId,
-        email: result.invitation.email,
-        status: result.invitation.status,
-        expiresAt: result.invitation.expiresAt,
-        createdAt: result.invitation.createdAt,
-      });
-      openModal({
-        kicker: "Convite emitido",
-        title: "Token de aceite — exibido uma única vez",
-        body: `
-          <p class="form-disclaimer">Guarde este token com segurança. O Core armazena apenas o hash — não será possível recuperá-lo.</p>
-          <div class="cc-token-box">
-            <code id="cc-invite-token">${escapeHtml(result.token)}</code>
-            <button class="button button--secondary" type="button" data-action="copy-invite-token">Copiar</button>
-          </div>
-          <p>Convite para <strong>${escapeHtml(result.invitation.email)}</strong> · expira em ${formatDate(result.invitation.expiresAt, true)}.</p>
-        `,
-        footer: `<button class="button button--primary" type="button" data-action="close-modal">Concluir</button>`,
-      });
+      showInvitationLink(result, form.dataset.tenantId);
       showToast("Convite emitido", "success", `Convite registrado para ${result.invitation.email}.`);
-      if (state.selectedTenantId === form.dataset.tenantId) renderView();
+      if (state.selectedTenantId === form.dataset.tenantId) await loadTenantDetail(form.dataset.tenantId);
     } catch (error) {
       fieldError(form, Core.friendlyError(error));
       setBusy(button, false);
@@ -1603,6 +1659,14 @@
       /* ações administrativas */
       case "open-create-tenant": openCreateTenantModal(); break;
       case "submit-create-tenant": submitCreateTenant(actionButton); break;
+      case "edit-tenant": openEditTenantModal(actionButton.dataset.tenantId); break;
+      case "submit-edit-tenant": submitEditTenant(actionButton); break;
+      case "activate-tenant": openActivateTenantModal(actionButton.dataset.tenantId); break;
+      case "execute-activate-tenant": executeActivateTenant(actionButton.dataset.tenantId, actionButton); break;
+      case "open-owner": openOwnerModal(actionButton.dataset.tenantId); break;
+      case "submit-owner": submitOwner(actionButton); break;
+      case "revoke-invitation": openRevokeInvitationModal(actionButton.dataset.tenantId, actionButton.dataset.invitationId); break;
+      case "execute-revoke-invitation": executeRevokeInvitation(actionButton.dataset.tenantId, actionButton.dataset.invitationId, actionButton); break;
       case "suspend-tenant": openSuspendTenantModal(actionButton.dataset.tenantId); break;
       case "suspend-tenant-step2": openSuspendTenantConfirm(actionButton.dataset.tenantId); break;
       case "execute-suspend-tenant": executeSuspendTenant(actionButton); break;
@@ -1634,7 +1698,7 @@
       case "copy-invite-token": {
         const token = document.getElementById("cc-invite-token")?.textContent || "";
         navigator.clipboard?.writeText(token).then(
-          () => showToast("Token copiado", "success", "Entregue por canal seguro — não será exibido novamente."),
+          () => showToast("Link copiado", "success", "Entregue por canal seguro — não será exibido novamente."),
           () => showToast("Copie manualmente", "warning", "Seu navegador bloqueou a cópia automática.")
         );
         break;

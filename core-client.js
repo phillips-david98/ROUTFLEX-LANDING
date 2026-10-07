@@ -104,6 +104,10 @@
     ALREADY_MEMBER: "Este e-mail já é membro da organização.",
     VALIDATION_FAILED: "Dados inválidos. Revise os campos informados.",
     PASSWORD_REQUIRED: "Novo usuário requer senha com no mínimo 12 caracteres.",
+    INVITATION_NOT_FOUND: "Convite inválido. Confira o link recebido.",
+    INVITATION_NOT_PENDING: "Este convite já foi aceito, revogado ou expirou.",
+    INVITATION_EXPIRED: "Este convite expirou. Solicite um novo convite à empresa.",
+    CROSS_TENANT_REFERENCE: "Este convite ou recurso não pertence à empresa informada.",
     INVALID_REFRESH_TOKEN: "Sessão expirada. Autentique-se novamente.",
     AUTHENTICATION_SESSION_REVOKED: "Sessão encerrada. Autentique-se novamente.",
     REFRESH_TOKEN_REPLAY_DETECTED: "Sessão encerrada. Autentique-se novamente.",
@@ -273,6 +277,7 @@
     login: (email, password) => request("/auth/login", { method: "POST", body: { email, password }, auth: false }),
     logout,
     acceptInvitation: (payload) => request("/invitations/accept", { method: "POST", body: payload, auth: false }),
+    previewInvitation: (token, tenantId) => request("/invitations/preview", { method: "POST", body: { token, ...(tenantId ? { tenantId } : {}) }, auth: false }),
 
     /* autenticado (qualquer usuário) */
     me: () => request("/me"),
@@ -283,6 +288,13 @@
     adminCreateTenant: (payload) => request("/admin/tenants", { method: "POST", body: payload }),
     adminListTenants: (query) => request("/admin/tenants", { query }),
     adminGetTenant: (tenantId) => request(`/admin/tenants/${tenantId}`),
+    adminUpdateTenant: (tenantId, payload) => request(`/admin/tenants/${tenantId}`, { method: "PATCH", body: payload }),
+    adminActivateTenant: (tenantId) => request(`/admin/tenants/${tenantId}/activate`, { method: "POST", body: {} }),
+    adminDesignateOwner: (tenantId, email) => request(`/admin/tenants/${tenantId}/owner`, { method: "POST", body: { email } }),
+    adminTenantRoles: (tenantId) => request(`/admin/tenants/${tenantId}/roles`),
+    adminTenantMemberships: (tenantId) => request(`/admin/tenants/${tenantId}/memberships`),
+    adminTenantInvitations: (tenantId) => request(`/admin/tenants/${tenantId}/invitations`),
+    adminRevokeInvitation: (tenantId, invitationId) => request(`/admin/tenants/${tenantId}/invitations/${invitationId}/revoke`, { method: "POST", body: {} }),
     adminSuspendTenant: (tenantId, reason) => request(`/admin/tenants/${tenantId}/suspend`, { method: "POST", body: { reason } }),
     adminReactivateTenant: (tenantId) => request(`/admin/tenants/${tenantId}/reactivate`, { method: "POST", body: {} }),
     adminListEntitlements: (tenantId) => request(`/admin/tenants/${tenantId}/entitlements`),
@@ -382,6 +394,14 @@
     return Object.assign({}, DEFAULT_MODULE_LINKS);
   }
 
+  function invitationUrl(token, tenantId) {
+    const root = new URL(window.location.href);
+    root.pathname = root.pathname.replace(/(?:control-center\/[^/]*|[^/]*)$/, "invitation.html");
+    root.search = "";
+    root.hash = new URLSearchParams({ token, ...(tenantId ? { tenantId } : {}) }).toString();
+    return root.toString();
+  }
+
   window.RoutflexCore = {
     api,
     request,
@@ -390,6 +410,7 @@
     LABELS,
     MODULE_META,
     moduleLinks,
+    invitationUrl,
     apiBase,
     setApiBase,
     getToken,
