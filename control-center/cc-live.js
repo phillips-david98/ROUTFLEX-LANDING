@@ -1,0 +1,1668 @@
+/* =============================================================================
+   ROUTflex Control Center — console conectado ao Platform Core
+   -----------------------------------------------------------------------------
+   Camada exclusivamente visual: todo dado exibido vem dos endpoints aprovados
+   (window.RoutflexCore). Nenhuma regra de negócio é decidida neste arquivo.
+   Lacunas do contrato são exibidas como "indisponível" e registradas — nunca
+   preenchidas com dados inventados.
+   ============================================================================= */
+(() => {
+  "use strict";
+
+  const Core = window.RoutflexCore;
+  if (!Core) {
+    document.getElementById("cc-login-error")?.removeAttribute("hidden");
+    return;
+  }
+  const api = Core.api;
+  const LABELS = Core.LABELS;
+
+  /* ── Referências de DOM ────────────────────────────────────────────────── */
+  const accessScreen = document.getElementById("access-screen");
+  const controlCenter = document.getElementById("control-center");
+  const appShell = document.querySelector(".app-shell");
+  const viewRoot = document.getElementById("view-root");
+  const currentAreaTitle = document.getElementById("current-area-title");
+  const loginForm = document.getElementById("cc-login-form");
+  const loginEmail = document.getElementById("cc-login-email");
+  const loginPassword = document.getElementById("cc-login-password");
+  const loginError = document.getElementById("cc-login-error");
+  const loginSubmit = document.getElementById("cc-login-submit");
+  const accessPill = document.getElementById("cc-access-pill");
+  const topbarEnv = document.getElementById("cc-topbar-env");
+  const sidebarEnv = document.getElementById("cc-sidebar-env");
+  const modalLayer = document.getElementById("modal-layer");
+  const modal = document.getElementById("modal");
+  const modalKicker = document.getElementById("modal-kicker");
+  const modalTitle = document.getElementById("modal-title");
+  const modalBody = document.getElementById("modal-body");
+  const modalFooter = document.getElementById("modal-footer");
+  const toastRegion = document.getElementById("toast-region");
+  const searchInput = document.getElementById("global-search");
+  const searchResults = document.getElementById("global-search-results");
+  const notificationPopover = document.getElementById("notification-popover");
+  const ownerPopover = document.getElementById("owner-popover");
+
+  const viewLabels = {
+    overview: "Visão geral",
+    companies: "Empresas",
+    licenses: "Licenças e módulos",
+    users: "Usuários globais",
+    environments: "Ambientes",
+    onboarding: "Onboarding",
+    security: "Segurança e auditoria",
+    settings: "Configurações",
+  };
+
+  /* ── Estado do console (cache de leitura, nunca fonte de verdade) ─────── */
+  const state = {
+    user: null,
+    activeView: "overview",
+    catalog: null,
+    tenants: [],
+    tenantsLoading: false,
+    tenantsError: null,
+    tenantsLoaded: false,
+    filters: { status: "all", search: "" },
+    selectedTenantId: null,
+    companyTab: "summary",
+    detail: null,            // adminGetTenant
+    detailEntitlements: null, // adminListEntitlements
+    detailLoading: false,
+    detailError: null,
+    detailAudit: null,
+    detailAuditLoading: false,
+    licenseTenantId: null,
+    licenseData: null,
+    licenseLoading: false,
+    licenseError: null,
+    audit: [],
+    auditLoading: false,
+    auditError: null,
+    auditTenantFilter: "all",
+    auditDone: false,
+    sessionInvites: [],       // convites emitidos nesta sessão (contrato não expõe listagem à plataforma)
+    sidebarCollapsed: false,
+  };
+
+  let modalOpener = null;
+  let toastTimer = 0;
+  const AUDIT_PAGE = 30;
+
+  /* ── Utilitários visuais (idênticos à identidade premium existente) ────── */
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  function slug(value) {
+    return String(value ?? "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
+  }
+
+  function formatDate(value, includeTime = false) {
+    if (!value) return "—";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return escapeHtml(String(value));
+    return new Intl.DateTimeFormat("pt-BR", includeTime
+      ? { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }
+      : { day: "2-digit", month: "short", year: "numeric" }
+    ).format(date).replace(" de ", " ");
+  }
+
+  function statusBadge(label) {
+    return `<span class="status-badge status-badge--${slug(label)}"><i></i>${escapeHtml(label)}</span>`;
+  }
+
+  const tenantBadge = (status) => statusBadge(LABELS.tenantStatus[status] || status);
+  const entBadge = (stateKey) => statusBadge(LABELS.entitlementState[stateKey] || stateKey);
+  const inviteBadge = (status) => statusBadge(LABELS.invitationStatus[status] || status);
+
+  function moduleName(moduleKey) {
+    const found = state.catalog?.modules?.find((m) => m.key === moduleKey);
+    return found ? found.name : (Core.MODULE_META[moduleKey]?.fallbackName || moduleKey);
+  }
+
+  function modulePill(moduleKey, active = true) {
+    const tone = active ? slug(moduleKey) : "inactive";
+    return `<span class="module-pill module-pill--${tone}">${escapeHtml(moduleName(moduleKey))}</span>`;
+  }
+
+  function pageHeader(kicker, title, description, actions = "") {
+    return `
+      <header class="page-header">
+        <div>
+          <span class="page-kicker">${escapeHtml(kicker)}</span>
+          <h1 tabindex="-1">${escapeHtml(title)}</h1>
+          <p>${escapeHtml(description)}</p>
+        </div>
+        ${actions ? `<div class="page-actions">${actions}</div>` : ""}
+      </header>
+    `;
+  }
+
+  function emptyState(title, description) {
+    return `
+      <div class="empty-state">
+        <span aria-hidden="true">⌕</span>
+        <strong>${escapeHtml(title)}</strong>
+        <p>${escapeHtml(description)}</p>
+      </div>
+    `;
+  }
+
+  /* Painel de lacuna de contrato: estado indisponível registrado, sem invenção */
+  function gapPanel(title, description, extra = "") {
+    return `
+      <section class="panel">
+        <header class="panel__header"><div><span>Indisponível no contrato atual</span><h2>${escapeHtml(title)}</h2></div></header>
+        <div class="empty-state">
+          <span aria-hidden="true">⛔</span>
+          <strong>Sem endpoint aprovado para esta visão</strong>
+          <p>${escapeHtml(description)}</p>
+        </div>
+        ${extra}
+        <p class="panel-note">Lacuna registrada: esta área só será habilitada quando o Platform Core expor o contrato correspondente. Nenhum dado é simulado no console conectado.</p>
+      </section>
+    `;
+  }
+
+  function errorPanel(error, retryAction) {
+    return `
+      <section class="panel">
+        <div class="empty-state">
+          <span aria-hidden="true">!</span>
+          <strong>Não foi possível carregar os dados</strong>
+          <p>${escapeHtml(Core.friendlyError(error))}</p>
+        </div>
+        <div class="table-actions" style="justify-content:center;">
+          <button class="button button--secondary" type="button" data-action="${escapeHtml(retryAction)}">Tentar novamente</button>
+        </div>
+      </section>
+    `;
+  }
+
+  function skeletonPanel(lines = 4) {
+    return `
+      <section class="panel" aria-busy="true">
+        <div class="cc-skeleton">${"<span></span>".repeat(lines)}</div>
+      </section>
+    `;
+  }
+
+  /* ── Modal / toast (mesma mecânica e classes do Control Center) ────────── */
+  function openModal({ kicker = "Ação administrativa", title, body, footer = "", size = "medium" }) {
+    if (modalLayer.hidden) modalOpener = document.activeElement;
+    modalKicker.textContent = kicker;
+    modalTitle.textContent = title;
+    modalBody.innerHTML = body;
+    modalFooter.innerHTML = footer;
+    modal.dataset.size = size;
+    modalLayer.hidden = false;
+    document.body.classList.add("has-modal");
+    controlCenter.inert = true;
+    requestAnimationFrame(() => {
+      const first = modal.querySelector("[autofocus]")
+        || modal.querySelector("input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled])");
+      (first || modal).focus();
+    });
+  }
+
+  function closeModal({ restoreFocus = true } = {}) {
+    if (modalLayer.hidden) return;
+    modalLayer.hidden = true;
+    document.body.classList.remove("has-modal");
+    controlCenter.inert = false;
+    modalBody.innerHTML = "";
+    modalFooter.innerHTML = "";
+    if (restoreFocus && modalOpener?.isConnected) modalOpener.focus();
+    modalOpener = null;
+  }
+
+  function showToast(title, tone = "success", description = "Ação registrada no Platform Core.") {
+    window.clearTimeout(toastTimer);
+    toastRegion.innerHTML = `
+      <div class="toast toast--${tone}">
+        <span class="toast__icon" aria-hidden="true">${tone === "success" ? "✓" : "!"}</span>
+        <div><strong>${escapeHtml(title)}</strong><p>${escapeHtml(description)}</p></div>
+        <button type="button" data-action="dismiss-toast" aria-label="Fechar notificação">×</button>
+      </div>
+    `;
+    toastTimer = window.setTimeout(() => { toastRegion.innerHTML = ""; }, 5600);
+  }
+
+  function setBusy(button, busy, busyLabel = "Processando…") {
+    if (!button) return;
+    if (busy) {
+      button.dataset.originalLabel = button.textContent;
+      button.textContent = busyLabel;
+      button.disabled = true;
+    } else {
+      if (button.dataset.originalLabel) button.textContent = button.dataset.originalLabel;
+      button.disabled = false;
+    }
+  }
+
+  function setConnectionState(online, label) {
+    const text = label || (online ? "Core conectado" : "Sem conexão com o Core");
+    if (topbarEnv) {
+      topbarEnv.classList.toggle("is-online", online);
+      topbarEnv.classList.toggle("is-offline", !online);
+      topbarEnv.querySelector("span").textContent = text;
+    }
+    if (sidebarEnv) sidebarEnv.innerHTML = `<i></i> ${escapeHtml(online ? "Conectado" : "Offline")}`;
+  }
+
+  /* ── Carregadores (somente endpoints aprovados) ────────────────────────── */
+  async function loadCatalog() {
+    state.catalog = await api.catalog();
+  }
+
+  async function loadTenants() {
+    state.tenantsLoading = true;
+    state.tenantsError = null;
+    renderView();
+    try {
+      const query = {};
+      if (state.filters.status !== "all") query.status = state.filters.status;
+      if (state.filters.search.trim()) query.search = state.filters.search.trim();
+      query.limit = 200;
+      state.tenants = await api.adminListTenants(query);
+      state.tenantsLoaded = true;
+      setConnectionState(true);
+    } catch (error) {
+      state.tenantsError = error;
+      if (error.code === "NETWORK_UNREACHABLE") setConnectionState(false);
+    } finally {
+      state.tenantsLoading = false;
+      renderView();
+    }
+  }
+
+  async function loadTenantDetail(tenantId) {
+    state.detailLoading = true;
+    state.detailError = null;
+    state.detail = null;
+    state.detailEntitlements = null;
+    state.detailAudit = null;
+    renderView();
+    try {
+      const [detail, entitlements] = await Promise.all([
+        api.adminGetTenant(tenantId),
+        api.adminListEntitlements(tenantId),
+      ]);
+      state.detail = detail;
+      state.detailEntitlements = entitlements;
+    } catch (error) {
+      state.detailError = error;
+    } finally {
+      state.detailLoading = false;
+      renderView();
+    }
+  }
+
+  async function loadDetailAudit(tenantId) {
+    state.detailAuditLoading = true;
+    renderView();
+    try {
+      state.detailAudit = await api.adminListAudit({ tenantId, limit: 15 });
+    } catch (error) {
+      state.detailAudit = { error };
+    } finally {
+      state.detailAuditLoading = false;
+      renderView();
+    }
+  }
+
+  async function loadLicenses(tenantId) {
+    state.licenseTenantId = tenantId;
+    state.licenseLoading = true;
+    state.licenseError = null;
+    state.licenseData = null;
+    renderView();
+    try {
+      state.licenseData = await api.adminListEntitlements(tenantId);
+    } catch (error) {
+      state.licenseError = error;
+    } finally {
+      state.licenseLoading = false;
+      renderView();
+    }
+  }
+
+  async function loadAudit({ reset = true } = {}) {
+    state.auditLoading = true;
+    state.auditError = null;
+    if (reset) { state.audit = []; state.auditDone = false; }
+    renderView();
+    try {
+      const query = { limit: AUDIT_PAGE };
+      if (state.auditTenantFilter !== "all") query.tenantId = state.auditTenantFilter;
+      if (!reset && state.audit.length) query.cursor = state.audit[state.audit.length - 1].id;
+      const page = await api.adminListAudit(query);
+      state.audit = reset ? page : state.audit.concat(page);
+      if (page.length < AUDIT_PAGE) state.auditDone = true;
+    } catch (error) {
+      state.auditError = error;
+    } finally {
+      state.auditLoading = false;
+      renderView();
+    }
+  }
+
+  /* ── Views ─────────────────────────────────────────────────────────────── */
+  function tenantCountsByStatus() {
+    const counts = { PROVISIONING: 0, TRIAL: 0, ACTIVE: 0, SUSPENDED: 0, CANCELLED: 0 };
+    state.tenants.forEach((tenant) => { if (counts[tenant.status] !== undefined) counts[tenant.status] += 1; });
+    return counts;
+  }
+
+  function renderOverview() {
+    if (state.tenantsLoading && !state.tenantsLoaded) {
+      return pageHeader("Comando executivo", "Visão geral", "Consolidando dados do Platform Core…") + skeletonPanel(5) + skeletonPanel(4);
+    }
+    if (state.tenantsError && !state.tenantsLoaded) {
+      return pageHeader("Comando executivo", "Visão geral", "Leitura consolidada do ecossistema.") + errorPanel(state.tenantsError, "retry-tenants");
+    }
+    const counts = tenantCountsByStatus();
+    const total = state.tenants.length;
+    const recent = [...state.tenants]
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, 5);
+    const auditPreview = state.audit.slice(0, 8);
+
+    return `
+      ${pageHeader(
+        "Comando executivo",
+        "Visão geral",
+        "Leitura consolidada do ecossistema a partir do Platform Core — dados reais, sem simulação.",
+        `<button class="button button--primary" type="button" data-action="open-create-tenant">Nova empresa</button>`
+      )}
+
+      <section class="metric-grid" aria-label="Indicadores principais">
+        ${[
+          ["Empresas registradas", total, "Portfólio completo no Core", "neutral"],
+          ["Ativas", counts.ACTIVE, "Operação plena", "positive"],
+          ["Em trial", counts.TRIAL, "Períodos de avaliação", "violet"],
+          ["Provisionando", counts.PROVISIONING, "Setup em andamento", "info"],
+          ["Suspensas", counts.SUSPENDED, "Acesso bloqueado pelo Core", counts.SUSPENDED ? "warning" : "positive"],
+          ["Canceladas", counts.CANCELLED, "Encerramentos registrados", "neutral"],
+        ].map(([label, value, note, tone]) => `
+          <article class="metric-card metric-card--${tone}">
+            <span>${escapeHtml(label)}</span>
+            <strong>${value}</strong>
+            <small>${escapeHtml(note)}</small>
+          </article>
+        `).join("")}
+      </section>
+
+      <div class="panel-grid">
+        <section class="panel">
+          <header class="panel__header"><div><span>Portfólio</span><h2>Empresas recentes</h2></div><button class="text-button" type="button" data-view="companies">Ver empresas</button></header>
+          ${recent.length ? `
+            <table class="data-table">
+              <thead><tr><th scope="col">Empresa</th><th scope="col">Status</th><th scope="col">Criada em</th><th scope="col"></th></tr></thead>
+              <tbody>
+                ${recent.map((tenant) => `
+                  <tr>
+                    <td><strong>${escapeHtml(tenant.displayName)}</strong><br><small>${escapeHtml(tenant.slug)}</small></td>
+                    <td>${tenantBadge(tenant.status)}</td>
+                    <td>${formatDate(tenant.createdAt)}</td>
+                    <td><button class="button button--table" type="button" data-action="open-company" data-tenant-id="${tenant.id}">Detalhes</button></td>
+                  </tr>
+                `).join("")}
+              </tbody>
+            </table>
+          ` : emptyState("Nenhuma empresa registrada", "Crie o primeiro tenant para iniciar a operação da plataforma.")}
+          ${counts.SUSPENDED ? `<div class="panel-note panel-note--risk">${counts.SUSPENDED} empresa(s) suspensa(s) — acessos bloqueados pelo Core até reativação.</div>` : ""}
+        </section>
+
+        <section class="panel">
+          <header class="panel__header"><div><span>Atividade</span><h2>Movimentações administrativas</h2></div><button class="text-button" type="button" data-view="security">Abrir auditoria</button></header>
+          ${state.auditLoading && !auditPreview.length ? `<div class="cc-skeleton"><span></span><span></span><span></span></div>` : ""}
+          ${auditPreview.length ? `
+            <ul class="activity-list">
+              ${auditPreview.map((event) => `
+                <li>
+                  <strong>${escapeHtml(event.action)}</strong>
+                  <span>${escapeHtml(event.category)} · ${escapeHtml(event.actorType)} · ${statusResultLabel(event.result)}</span>
+                  <small>${formatDate(event.occurredAt, true)}</small>
+                </li>
+              `).join("")}
+            </ul>
+          ` : (!state.auditLoading ? emptyState("Sem eventos carregados", "A trilha de auditoria aparece aqui assim que houver movimentações.") : "")}
+        </section>
+      </div>
+    `;
+  }
+
+  function statusResultLabel(result) {
+    const map = { SUCCESS: "Concluído", DENIED: "Negado", FAILURE: "Falha" };
+    return escapeHtml(map[result] || result);
+  }
+
+  function renderCompanies() {
+    const statusOptions = ["all", "PROVISIONING", "TRIAL", "ACTIVE", "SUSPENDED", "CANCELLED"].map((value) => {
+      const label = value === "all" ? "Todos os status" : (LABELS.tenantStatus[value] || value);
+      return `<option value="${value}"${state.filters.status === value ? " selected" : ""}>${escapeHtml(label)}</option>`;
+    }).join("");
+
+    let results;
+    if (state.tenantsLoading) {
+      results = `<div class="cc-skeleton"><span></span><span></span><span></span><span></span></div>`;
+    } else if (state.tenantsError) {
+      results = errorPanelInline(state.tenantsError, "retry-tenants");
+    } else if (!state.tenants.length) {
+      results = emptyState("Nenhuma empresa encontrada", "Ajuste os filtros ou crie um novo tenant.");
+    } else {
+      results = `
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th scope="col">Empresa</th><th scope="col">Status</th><th scope="col">País / Moeda</th>
+              <th scope="col">Fuso padrão</th><th scope="col">Criada em</th><th scope="col"></th>
+            </tr>
+          </thead>
+          <tbody>
+            ${state.tenants.map((tenant) => `
+              <tr>
+                <td><strong>${escapeHtml(tenant.displayName)}</strong><br><small>${escapeHtml(tenant.slug)}</small></td>
+                <td>${tenantBadge(tenant.status)}</td>
+                <td>${escapeHtml(tenant.primaryCountry)} · ${escapeHtml(tenant.defaultCurrency)}</td>
+                <td>${escapeHtml(tenant.defaultTimezone)}</td>
+                <td>${formatDate(tenant.createdAt)}</td>
+                <td><button class="button button--table" type="button" data-action="open-company" data-tenant-id="${tenant.id}">Ver detalhes</button></td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      `;
+    }
+
+    return `
+      ${pageHeader(
+        "Portfólio",
+        "Empresas",
+        "Tenants registrados no Platform Core, com filtros resolvidos pelo servidor.",
+        `<button class="button button--primary" type="button" data-action="open-create-tenant">Nova empresa</button>`
+      )}
+      <section class="panel toolbar" aria-label="Filtros de empresas">
+        <form class="filter-grid filter-grid--companies" data-form="company-filters">
+          <label>Status
+            <select name="status">${statusOptions}</select>
+          </label>
+          <label>Busca
+            <input type="search" name="search" placeholder="Nome ou slug" value="${escapeHtml(state.filters.search)}">
+          </label>
+          <div class="filter-actions">
+            <button class="button button--secondary" type="submit">Aplicar filtros</button>
+            <button class="button button--table" type="button" data-action="clear-company-filters">Limpar</button>
+          </div>
+        </form>
+      </section>
+      <section class="panel table-panel" aria-label="Lista de empresas">${results}</section>
+    `;
+  }
+
+  function errorPanelInline(error, retryAction) {
+    return `
+      <div class="empty-state">
+        <span aria-hidden="true">!</span>
+        <strong>Não foi possível carregar</strong>
+        <p>${escapeHtml(Core.friendlyError(error))}</p>
+        <button class="button button--secondary" type="button" data-action="${escapeHtml(retryAction)}">Tentar novamente</button>
+      </div>
+    `;
+  }
+
+  function renderCompanyDetail() {
+    if (state.detailLoading) {
+      return pageHeader("Empresa", "Carregando…", "Consultando o Platform Core.") + skeletonPanel(6);
+    }
+    if (state.detailError || !state.detail) {
+      return pageHeader("Empresa", "Detalhe indisponível", "O Core não retornou os dados desta empresa.")
+        + errorPanel(state.detailError || {}, "retry-company-detail")
+        + `<div class="table-actions"><button class="button button--secondary" type="button" data-action="back-to-companies">Voltar para empresas</button></div>`;
+    }
+
+    const tenant = state.detail;
+    const isSuspended = tenant.status === "SUSPENDED";
+    const isCancelled = tenant.status === "CANCELLED";
+    const monogram = tenant.displayName.split(/\s+/).slice(0, 2).map((word) => word[0]).join("").toUpperCase();
+
+    const tabs = [
+      ["summary", "Resumo"],
+      ["modules", "Módulos e licenças"],
+      ["invites", "Convites"],
+      ["access", "Acessos"],
+      ["audit", "Auditoria"],
+    ].map(([key, label]) => `<button type="button" data-company-tab="${key}"${state.companyTab === key ? ' aria-current="page"' : ""}>${label}</button>`).join("");
+
+    return `
+      <button class="back-button" type="button" data-action="back-to-companies"><span aria-hidden="true">←</span> Voltar para empresas</button>
+      <header class="detail-header">
+        <div class="detail-header__identity">
+          <span class="company-monogram" aria-hidden="true">${escapeHtml(monogram)}</span>
+          <div><span class="page-kicker">${escapeHtml(tenant.slug)}</span><h1 tabindex="-1">${escapeHtml(tenant.displayName)}</h1><div>${tenantBadge(tenant.status)}</div></div>
+        </div>
+        <div class="detail-header__actions">
+          <button class="button button--secondary" type="button" data-action="open-invite" data-tenant-id="${tenant.id}">Convidar Tenant Admin</button>
+          ${isSuspended
+            ? `<button class="button button--positive" type="button" data-action="reactivate-tenant" data-tenant-id="${tenant.id}">Reativar empresa</button>`
+            : (!isCancelled ? `<button class="button button--danger-ghost" type="button" data-action="suspend-tenant" data-tenant-id="${tenant.id}">Suspender empresa</button>` : "")}
+        </div>
+        <dl class="detail-meta">
+          <div><dt>Criada em</dt><dd>${formatDate(tenant.createdAt)}</dd></div>
+          <div><dt>Usuários</dt><dd>${tenant._count?.memberships ?? "—"}</dd></div>
+          <div><dt>Unidades</dt><dd>${tenant._count?.units ?? "—"}</dd></div>
+          <div><dt>Fuso</dt><dd>${escapeHtml(tenant.defaultTimezone)}</dd></div>
+        </dl>
+        ${tenant.suspendedAt ? `<p class="cc-inline-note">Suspensa em ${formatDate(tenant.suspendedAt, true)}${tenant.suspendedReason ? ` — “${escapeHtml(tenant.suspendedReason)}”` : ""}</p>` : ""}
+        ${tenant.cancelledAt ? `<p class="cc-inline-note">Cancelada em ${formatDate(tenant.cancelledAt, true)}</p>` : ""}
+      </header>
+      <nav class="detail-tabs" aria-label="Seções da empresa">${tabs}</nav>
+      <div class="detail-content">${renderCompanyTab(tenant)}</div>
+    `;
+  }
+
+  function renderCompanyTab(tenant) {
+    switch (state.companyTab) {
+      case "modules": return renderCompanyModules(tenant);
+      case "invites": return renderCompanyInvites(tenant);
+      case "access": return renderCompanyAccess(tenant);
+      case "audit": return renderCompanyAudit(tenant);
+      default: return renderCompanySummary(tenant);
+    }
+  }
+
+  function renderCompanySummary(tenant) {
+    const fact = (label, value) => `<div><span>${escapeHtml(label)}</span><strong>${value || "—"}</strong></div>`;
+    const entPills = (tenant.entitlements || []).map((ent) => modulePill(ent.moduleKey, ent.state === "ACTIVE" || ent.state === "TRIAL")).join(" ")
+      || `<span class="cc-inline-note">Nenhum módulo concedido até o momento.</span>`;
+    return `
+      <div class="panel-grid">
+        <section class="panel">
+          <header class="panel__header"><div><span>Dados corporativos</span><h2>Identificação</h2></div></header>
+          <div class="info-grid">
+            ${fact("Razão social", escapeHtml(tenant.legalName || ""))}
+            ${fact("Documento", tenant.taxIdValue ? `${escapeHtml(tenant.taxIdType || "")} ${escapeHtml(tenant.taxIdValue)}` : "")}
+            ${fact("País", escapeHtml(tenant.primaryCountry))}
+            ${fact("Locale padrão", escapeHtml(tenant.defaultLocale))}
+            ${fact("Fuso horário", escapeHtml(tenant.defaultTimezone))}
+            ${fact("Moeda", escapeHtml(tenant.defaultCurrency))}
+            ${fact("Criada em", formatDate(tenant.createdAt, true))}
+            ${fact("Atualizada em", formatDate(tenant.updatedAt, true))}
+          </div>
+        </section>
+        <section class="panel">
+          <header class="panel__header"><div><span>Dimensões</span><h2>Estrutura registrada</h2></div></header>
+          <div class="metric-grid metric-grid--compact">
+            <article class="metric-card metric-card--info"><span>Usuários vinculados</span><strong>${tenant._count?.memberships ?? "—"}</strong><small>Memberships no Core</small></article>
+            <article class="metric-card metric-card--neutral"><span>Unidades</span><strong>${tenant._count?.units ?? "—"}</strong><small>Estrutura organizacional</small></article>
+          </div>
+          <header class="panel__header" style="margin-top:14px;"><div><span>Entitlements</span><h2>Módulos concedidos</h2></div><button class="text-button" type="button" data-company-tab="modules">Configurar</button></header>
+          <p>${entPills}</p>
+        </section>
+      </div>
+    `;
+  }
+
+  function renderCompanyModules(tenant) {
+    const entitlements = state.detailEntitlements || [];
+    const byKey = new Map(entitlements.map((ent) => [ent.moduleKey, ent]));
+    const allModules = (state.catalog?.modules || []).map((m) => m.key);
+    const rows = allModules.map((moduleKey) => {
+      const ent = byKey.get(moduleKey);
+      const stateKey = ent ? ent.state : "NOT_CONTRACTED";
+      const quotas = ent?.seatQuotas?.length
+        ? ent.seatQuotas.map((quota) => `<small>${escapeHtml(LABELS.seatType[quota.seatTypeKey] || quota.seatTypeKey)}: ${quota.quantityContracted}${quota.quantityOverageAllowed ? ` (+${quota.quantityOverageAllowed})` : ""}</small>`).join("<br>")
+        : "<small>—</small>";
+      const canSuspend = ent && (stateKey === "ACTIVE" || stateKey === "TRIAL");
+      const canCancel = ent && stateKey !== "CANCELLED" && stateKey !== "NOT_CONTRACTED";
+      return `
+        <tr>
+          <td>${modulePill(moduleKey, stateKey === "ACTIVE" || stateKey === "TRIAL")}</td>
+          <td>${entBadge(stateKey)}</td>
+          <td>${ent ? formatDate(ent.activatedAt) : "—"}</td>
+          <td>${ent?.trialEndsAt ? formatDate(ent.trialEndsAt) : "—"}</td>
+          <td>${ent?.expiresAt ? formatDate(ent.expiresAt) : "—"}</td>
+          <td>${quotas}</td>
+          <td>
+            <div class="table-actions">
+              <button class="button button--table" type="button" data-action="open-entitlement" data-tenant-id="${tenant.id}" data-module-key="${moduleKey}">${ent ? "Configurar" : "Conceder"}</button>
+              ${canSuspend ? `<button class="button button--table" type="button" data-action="suspend-entitlement" data-tenant-id="${tenant.id}" data-module-key="${moduleKey}">Suspender</button>` : ""}
+              ${canCancel ? `<button class="button button--danger-ghost button--table" type="button" data-action="cancel-entitlement" data-tenant-id="${tenant.id}" data-module-key="${moduleKey}">Cancelar</button>` : ""}
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join("");
+
+    return `
+      <section class="panel table-panel">
+        <header class="panel__header"><div><span>Entitlements</span><h2>Módulos, estados e licenças contratadas</h2></div></header>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th scope="col">Módulo</th><th scope="col">Estado</th><th scope="col">Ativado</th>
+              <th scope="col">Fim do trial</th><th scope="col">Expira</th><th scope="col">Licenças contratadas</th><th scope="col"></th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <p class="panel-note">Ocupação de licenças (assentos em uso) é exposta pelo contrato apenas dentro do tenant (/tenants/:id/seats) e exige membership — indisponível para o papel de plataforma. Valores acima refletem o contratado.</p>
+      </section>
+    `;
+  }
+
+  function renderCompanyInvites(tenant) {
+    const invites = state.sessionInvites.filter((inv) => inv.tenantId === tenant.id);
+    return `
+      <section class="panel">
+        <header class="panel__header">
+          <div><span>Acesso inicial</span><h2>Convites emitidos nesta sessão</h2></div>
+          <button class="button button--primary" type="button" data-action="open-invite" data-tenant-id="${tenant.id}">Novo convite</button>
+        </header>
+        ${invites.length ? `
+          <table class="data-table">
+            <thead><tr><th scope="col">E-mail</th><th scope="col">Status</th><th scope="col">Expira</th><th scope="col">Emitido</th></tr></thead>
+            <tbody>
+              ${invites.map((inv) => `
+                <tr>
+                  <td>${escapeHtml(inv.email)}</td>
+                  <td>${inviteBadge(inv.status)}</td>
+                  <td>${formatDate(inv.expiresAt, true)}</td>
+                  <td>${formatDate(inv.createdAt, true)}</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        ` : emptyState("Nenhum convite emitido nesta sessão", "Use “Novo convite” para provisionar o primeiro Tenant Admin da empresa.")}
+        <p class="panel-note">Lacuna de contrato registrada: o Platform Core não expõe listagem de convites para o papel de plataforma (GET /tenants/:id/invitations exige membership). A lista acima cobre apenas convites emitidos nesta sessão do console.</p>
+      </section>
+    `;
+  }
+
+  function renderCompanyAccess(tenant) {
+    return gapPanel(
+      "Usuários e acessos da empresa",
+      "A listagem de memberships (GET /tenants/:id/memberships) é um endpoint de escopo do tenant: o contrato exige membership ativa e o papel de plataforma recebe MEMBERSHIP_NOT_FOUND. A gestão de equipe é feita pelo Tenant Admin no Workspace.",
+      `<div class="metric-grid metric-grid--compact" style="margin:14px 0;">
+        <article class="metric-card metric-card--info"><span>Usuários vinculados</span><strong>${tenant._count?.memberships ?? "—"}</strong><small>Contagem oficial via GET /admin/tenants/:id</small></article>
+        <article class="metric-card metric-card--neutral"><span>Unidades</span><strong>${tenant._count?.units ?? "—"}</strong><small>Contagem oficial via GET /admin/tenants/:id</small></article>
+      </div>`
+    );
+  }
+
+  function renderCompanyAudit(tenant) {
+    if (state.detailAudit === null && !state.detailAuditLoading) {
+      loadDetailAudit(tenant.id);
+      return skeletonPanel(5);
+    }
+    if (state.detailAuditLoading) return skeletonPanel(5);
+    if (state.detailAudit?.error) return errorPanel(state.detailAudit.error, "retry-company-audit");
+    const rows = state.detailAudit || [];
+    return `
+      <section class="panel table-panel">
+        <header class="panel__header"><div><span>Trilha imutável</span><h2>Eventos administrativos da empresa</h2></div><button class="text-button" type="button" data-action="retry-company-audit">Atualizar</button></header>
+        ${rows.length ? auditTable(rows) : emptyState("Sem eventos", "Nenhuma movimentação registrada para esta empresa.")}
+      </section>
+    `;
+  }
+
+  function auditTable(rows) {
+    return `
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th scope="col">Quando</th><th scope="col">Ação</th><th scope="col">Categoria</th>
+            <th scope="col">Ator</th><th scope="col">Resultado</th><th scope="col">Severidade</th><th scope="col">Request</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map((event) => `
+            <tr>
+              <td>${formatDate(event.occurredAt, true)}</td>
+              <td><strong>${escapeHtml(event.action)}</strong>${event.targetType ? `<br><small>${escapeHtml(event.targetType)}</small>` : ""}</td>
+              <td>${escapeHtml(event.category)}</td>
+              <td>${escapeHtml(event.actorType)}</td>
+              <td>${statusBadge(event.result === "SUCCESS" ? "Concluído" : event.result === "DENIED" ? "Negado" : "Falha")}</td>
+              <td>${escapeHtml(event.severity)}</td>
+              <td><small>${escapeHtml(event.requestId || "—")}</small></td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    `;
+  }
+
+  function renderLicenses() {
+    const tenantOptions = state.tenants.map((tenant) => (
+      `<option value="${tenant.id}"${tenant.id === state.licenseTenantId ? " selected" : ""}>${escapeHtml(tenant.displayName)}</option>`
+    )).join("");
+
+    let content;
+    if (!state.tenants.length) {
+      content = emptyState("Nenhuma empresa registrada", "Crie um tenant para configurar licenças.");
+    } else if (state.licenseLoading) {
+      content = `<div class="cc-skeleton"><span></span><span></span><span></span></div>`;
+    } else if (state.licenseError) {
+      content = errorPanelInline(state.licenseError, "retry-licenses");
+    } else if (!state.licenseTenantId) {
+      content = emptyState("Selecione uma empresa", "Escolha a empresa para visualizar o quadro de módulos e licenças.");
+    } else {
+      const rows = (state.licenseData || []).map((ent) => `
+        <tr>
+          <td>${modulePill(ent.moduleKey, ent.state === "ACTIVE" || ent.state === "TRIAL")}</td>
+          <td>${entBadge(ent.state)}</td>
+          <td>${ent.trialEndsAt ? formatDate(ent.trialEndsAt) : "—"}</td>
+          <td>${ent.expiresAt ? formatDate(ent.expiresAt) : "—"}</td>
+          <td>${ent.seatQuotas?.length
+            ? ent.seatQuotas.map((quota) => `<small>${escapeHtml(LABELS.seatType[quota.seatTypeKey] || quota.seatTypeKey)}: <strong>${quota.quantityContracted}</strong>${quota.quantityOverageAllowed ? ` +${quota.quantityOverageAllowed} tolerância` : ""}</small>`).join("<br>")
+            : "<small>—</small>"}</td>
+          <td><button class="button button--table" type="button" data-action="open-entitlement" data-tenant-id="${state.licenseTenantId}" data-module-key="${ent.moduleKey}">Configurar</button></td>
+        </tr>
+      `).join("");
+      content = rows
+        ? `<table class="data-table"><thead><tr><th scope="col">Módulo</th><th scope="col">Estado</th><th scope="col">Fim do trial</th><th scope="col">Expira</th><th scope="col">Licenças contratadas</th><th scope="col"></th></tr></thead><tbody>${rows}</tbody></table>`
+        : emptyState("Nenhum módulo concedido", "Esta empresa ainda não possui entitlements registrados.");
+    }
+
+    return `
+      ${pageHeader("Entitlements", "Licenças e módulos", "Quadro contratado por empresa, direto do Platform Core.")}
+      <section class="panel toolbar">
+        <form class="filter-grid filter-grid--compact" data-form="license-tenant">
+          <label>Empresa
+            <select name="tenantId">
+              <option value="">Selecionar…</option>
+              ${tenantOptions}
+            </select>
+          </label>
+          <div class="filter-actions"><button class="button button--secondary" type="submit">Carregar quadro</button></div>
+        </form>
+      </section>
+      <section class="panel table-panel">${content}</section>
+      <p class="panel-note">Consumo em tempo real (assentos ocupados) pertence ao escopo do tenant e é gerido pelo Tenant Admin no Workspace — o contrato não o expõe à plataforma.</p>
+    `;
+  }
+
+  function renderUsers() {
+    return `
+      ${pageHeader("Identidades", "Usuários globais", "Governança de identidades da plataforma.")}
+      ${gapPanel(
+        "Diretório global de usuários",
+        "O contrato atual do Platform Core não expõe listagem global de usuários (não há GET /admin/users). Usuários são visíveis por empresa, via contagem oficial em GET /admin/tenants/:id, e geridos pelo Tenant Admin no Workspace.",
+        `<div class="table-actions" style="margin-top:14px;"><button class="button button--secondary" type="button" data-view="companies">Abrir empresas</button></div>`
+      )}
+    `;
+  }
+
+  function renderEnvironments() {
+    return `
+      ${pageHeader("Infraestrutura", "Ambientes", "Saúde e topologia dos ambientes por empresa.")}
+      ${gapPanel(
+        "Monitoramento de ambientes",
+        "O Platform Core aprovado não possui endpoints de infraestrutura/ambientes. Esta visão permanece indisponível até que o contrato exponha esse domínio."
+      )}
+    `;
+  }
+
+  function renderOnboarding() {
+    return `
+      ${pageHeader("Implantação", "Onboarding", "Pipeline de ativação de novas empresas.")}
+      ${gapPanel(
+        "Pipeline de onboarding",
+        "Não há endpoint de onboarding no contrato. O ciclo de vida oficial disponível é o status do tenant (Provisionando → Trial/Ativa → Suspensa/Cancelada), visível na lista de empresas.",
+        `<div class="table-actions" style="margin-top:14px;"><button class="button button--secondary" type="button" data-view="companies">Ver ciclo de vida nas empresas</button></div>`
+      )}
+    `;
+  }
+
+  function renderSecurity() {
+    const tenantOptions = [`<option value="all"${state.auditTenantFilter === "all" ? " selected" : ""}>Toda a plataforma</option>`]
+      .concat(state.tenants.map((tenant) => `<option value="${tenant.id}"${tenant.id === state.auditTenantFilter ? " selected" : ""}>${escapeHtml(tenant.displayName)}</option>`))
+      .join("");
+
+    let content;
+    if (state.auditLoading && !state.audit.length) {
+      content = `<div class="cc-skeleton"><span></span><span></span><span></span><span></span></div>`;
+    } else if (state.auditError && !state.audit.length) {
+      content = errorPanelInline(state.auditError, "retry-audit");
+    } else if (!state.audit.length) {
+      content = emptyState("Sem eventos", "Nenhum evento de auditoria para o filtro selecionado.");
+    } else {
+      content = auditTable(state.audit) + `
+        <div class="table-actions" style="justify-content:center; margin-top:12px;">
+          ${state.auditDone
+            ? `<span class="cc-inline-note">Fim da trilha carregada.</span>`
+            : `<button class="button button--secondary" type="button" data-action="audit-more"${state.auditLoading ? " disabled" : ""}>${state.auditLoading ? "Carregando…" : "Carregar mais"}</button>`}
+        </div>
+      `;
+    }
+
+    return `
+      ${pageHeader("Trilha imutável", "Segurança e auditoria", "Eventos administrativos reais registrados pelo Platform Core (INSERT-only).")}
+      <section class="panel toolbar">
+        <form class="filter-grid filter-grid--compact" data-form="audit-filters">
+          <label>Escopo
+            <select name="tenantId">${tenantOptions}</select>
+          </label>
+          <div class="filter-actions"><button class="button button--secondary" type="submit">Aplicar</button></div>
+        </form>
+      </section>
+      <section class="panel table-panel">${content}</section>
+    `;
+  }
+
+  function renderSettings() {
+    return `
+      ${pageHeader("Console", "Configurações", "Preferências locais do console conectado — nada aqui altera o Platform Core.")}
+      <div class="panel-grid">
+        <section class="panel">
+          <header class="panel__header"><div><span>Conexão</span><h2>Platform Core</h2></div></header>
+          <form class="filter-grid filter-grid--compact" data-form="api-base">
+            <label>Endereço da API
+              <input type="url" name="apiBase" value="${escapeHtml(Core.apiBase())}" placeholder="http://localhost:3100/core">
+            </label>
+            <div class="filter-actions">
+              <button class="button button--secondary" type="submit">Salvar endereço</button>
+              <button class="button button--table" type="button" data-action="test-connection">Testar conexão</button>
+            </div>
+          </form>
+          <p class="panel-note">Para servir este console em outra origem, inclua a origem em CORE_CORS_ORIGINS no .env do Platform Core (passo de implantação — não é alterado por aqui).</p>
+        </section>
+        <section class="panel">
+          <header class="panel__header"><div><span>Sessão</span><h2>Identidade autenticada</h2></div></header>
+          <dl class="fact-grid">
+            <div><dt>Nome</dt><dd>${escapeHtml(state.user?.fullName || "—")}</dd></div>
+            <div><dt>E-mail</dt><dd>${escapeHtml(state.user?.email || "—")}</dd></div>
+            <div><dt>Papel</dt><dd>${escapeHtml(LABELS.platformRole[state.user?.platformRole] || state.user?.platformRole || "—")}</dd></div>
+            <div><dt>Token</dt><dd>Sessão de curta duração (15 min) — renovar via novo login</dd></div>
+          </dl>
+          <div class="table-actions"><button class="button button--danger-ghost" type="button" data-action="logout">Encerrar sessão</button></div>
+        </section>
+      </div>
+    `;
+  }
+
+  function renderView({ focusHeading = false } = {}) {
+    if (!state.user) return;
+    closePopovers();
+    const renderers = {
+      overview: renderOverview,
+      companies: state.selectedTenantId ? renderCompanyDetail : renderCompanies,
+      licenses: renderLicenses,
+      users: renderUsers,
+      environments: renderEnvironments,
+      onboarding: renderOnboarding,
+      security: renderSecurity,
+      settings: renderSettings,
+    };
+    const title = state.activeView === "companies" && state.selectedTenantId
+      ? (state.detail?.displayName || viewLabels.companies)
+      : viewLabels[state.activeView];
+    if (currentAreaTitle) currentAreaTitle.textContent = title;
+    viewRoot.innerHTML = renderers[state.activeView]();
+    document.querySelectorAll(".sidebar-nav [data-view]").forEach((button) => {
+      if (button.dataset.view === state.activeView) button.setAttribute("aria-current", "page");
+      else button.removeAttribute("aria-current");
+    });
+    if (focusHeading) {
+      window.scrollTo(0, 0);
+      requestAnimationFrame(() => viewRoot.querySelector("h1")?.focus({ preventScroll: true }));
+    }
+  }
+
+  function navigateTo(view, { focusHeading = true } = {}) {
+    state.activeView = view;
+    if (view !== "companies") state.selectedTenantId = null;
+    renderView({ focusHeading });
+  }
+
+  function openCompany(tenantId, tab = "summary") {
+    state.activeView = "companies";
+    state.selectedTenantId = tenantId;
+    state.companyTab = tab;
+    loadTenantDetail(tenantId);
+  }
+
+  /* ── Formulários e ações administrativas ───────────────────────────────── */
+  function fieldError(form, message) {
+    let line = form.querySelector(".form-error");
+    if (!line) {
+      line = document.createElement("p");
+      line.className = "form-error";
+      form.prepend(line);
+    }
+    line.textContent = message;
+    line.hidden = !message;
+  }
+
+  function openCreateTenantModal() {
+    openModal({
+      kicker: "Provisionamento",
+      title: "Nova empresa",
+      size: "wide",
+      body: `
+        <form class="form-grid" data-form="create-tenant" novalidate>
+          <label class="form-field">Slug (identificador único)
+            <input name="slug" required pattern="^[a-z0-9][a-z0-9-]{1,58}[a-z0-9]$" placeholder="minha-empresa">
+            <small class="form-hint">Minúsculas, números e hífen · 3 a 60 caracteres (regra do contrato).</small>
+          </label>
+          <label class="form-field">Nome de exibição
+            <input name="displayName" required minlength="2" maxlength="160" placeholder="Minha Empresa Ltda">
+          </label>
+          <label class="form-field">Razão social (opcional)
+            <input name="legalName" maxlength="200">
+          </label>
+          <label class="form-field">Tipo de documento (opcional)
+            <input name="taxIdType" maxlength="16" placeholder="CNPJ">
+          </label>
+          <label class="form-field">Documento (opcional)
+            <input name="taxIdValue" maxlength="32" placeholder="00.000.000/0001-00">
+          </label>
+          <label class="form-field">País
+            <input name="primaryCountry" maxlength="2" value="BR">
+          </label>
+          <label class="form-field">Locale padrão
+            <input name="defaultLocale" value="pt-BR">
+          </label>
+          <label class="form-field">Fuso horário
+            <input name="defaultTimezone" value="America/Sao_Paulo">
+          </label>
+          <label class="form-field">Moeda
+            <input name="defaultCurrency" maxlength="3" value="BRL">
+          </label>
+          <label class="form-field">Status inicial
+            <select name="status">
+              <option value="PROVISIONING" selected>Provisionando</option>
+              <option value="TRIAL">Trial</option>
+              <option value="ACTIVE">Ativa</option>
+            </select>
+          </label>
+          <p class="form-disclaimer">A criação é executada pelo Platform Core e registrada em auditoria.</p>
+        </form>
+      `,
+      footer: `
+        <button class="button button--secondary" type="button" data-action="close-modal">Cancelar</button>
+        <button class="button button--primary" type="button" data-action="submit-create-tenant">Criar empresa</button>
+      `,
+    });
+  }
+
+  async function submitCreateTenant(button) {
+    const form = modalBody.querySelector('[data-form="create-tenant"]');
+    if (!form.reportValidity()) return;
+    const data = Object.fromEntries(new FormData(form).entries());
+    const payload = { slug: data.slug.trim(), displayName: data.displayName.trim(), status: data.status };
+    ["legalName", "taxIdType", "taxIdValue"].forEach((key) => { if (data[key]?.trim()) payload[key] = data[key].trim(); });
+    ["primaryCountry", "defaultLocale", "defaultTimezone", "defaultCurrency"].forEach((key) => { if (data[key]?.trim()) payload[key] = data[key].trim(); });
+    setBusy(button, true);
+    try {
+      const tenant = await api.adminCreateTenant(payload);
+      closeModal();
+      showToast("Empresa criada", "success", `${tenant.displayName} registrada no Platform Core.`);
+      await loadTenants();
+      openCompany(tenant.id);
+    } catch (error) {
+      fieldError(form, Core.friendlyError(error));
+      setBusy(button, false);
+    }
+  }
+
+  function openSuspendTenantModal(tenantId) {
+    const tenant = state.detail?.id === tenantId ? state.detail : state.tenants.find((t) => t.id === tenantId);
+    if (!tenant) return;
+    openModal({
+      kicker: "Ação crítica — etapa 1 de 2",
+      title: `Suspender ${tenant.displayName}`,
+      body: `
+        <form class="form-grid" data-form="suspend-tenant" novalidate>
+          <p>Todos os acessos da empresa serão bloqueados pelo Core imediatamente. Dados são preservados e a reativação é possível a qualquer momento.</p>
+          <label class="form-field form-field--wide">Motivo (obrigatório, mínimo 3 caracteres)
+            <textarea name="reason" required minlength="3" maxlength="500" rows="3" placeholder="Ex.: inadimplência contratual"></textarea>
+          </label>
+        </form>
+      `,
+      footer: `
+        <button class="button button--secondary" type="button" data-action="close-modal">Cancelar</button>
+        <button class="button button--danger" type="button" data-action="suspend-tenant-step2" data-tenant-id="${tenant.id}">Continuar</button>
+      `,
+    });
+  }
+
+  function openSuspendTenantConfirm(tenantId) {
+    const form = modalBody.querySelector('[data-form="suspend-tenant"]');
+    if (!form || !form.reportValidity()) return;
+    const reason = new FormData(form).get("reason").trim();
+    const tenant = state.detail?.id === tenantId ? state.detail : state.tenants.find((t) => t.id === tenantId);
+    openModal({
+      kicker: "Ação crítica — confirmação explícita",
+      title: `Confirmar suspensão de ${tenant.displayName}`,
+      body: `
+        <p>Motivo registrado: “${escapeHtml(reason)}”.</p>
+        <label class="form-field form-field--wide">Digite o slug <strong>${escapeHtml(tenant.slug)}</strong> para confirmar
+          <input id="cc-critical-confirm" autocomplete="off" placeholder="${escapeHtml(tenant.slug)}">
+        </label>
+      `,
+      footer: `
+        <button class="button button--secondary" type="button" data-action="close-modal">Cancelar</button>
+        <button class="button button--danger" type="button" data-action="execute-suspend-tenant" data-tenant-id="${tenant.id}" data-reason="${escapeHtml(reason)}" data-expected="${escapeHtml(tenant.slug)}" disabled>Suspender agora</button>
+      `,
+    });
+  }
+
+  async function executeSuspendTenant(button) {
+    setBusy(button, true);
+    try {
+      await api.adminSuspendTenant(button.dataset.tenantId, button.dataset.reason);
+      closeModal();
+      showToast("Empresa suspensa", "warning", "Bloqueio aplicado pelo Core e registrado em auditoria.");
+      await loadTenants();
+      if (state.selectedTenantId) loadTenantDetail(state.selectedTenantId);
+    } catch (error) {
+      closeModal();
+      showToast("Falha ao suspender", "danger", Core.friendlyError(error));
+    }
+  }
+
+  function openReactivateTenantModal(tenantId) {
+    const tenant = state.detail?.id === tenantId ? state.detail : state.tenants.find((t) => t.id === tenantId);
+    if (!tenant) return;
+    openModal({
+      kicker: "Ação administrativa",
+      title: `Reativar ${tenant.displayName}`,
+      body: `<p>A empresa voltará ao estado ativo e os acessos serão restabelecidos conforme licenças vigentes.</p>`,
+      footer: `
+        <button class="button button--secondary" type="button" data-action="close-modal">Cancelar</button>
+        <button class="button button--positive" type="button" data-action="execute-reactivate-tenant" data-tenant-id="${tenant.id}">Reativar</button>
+      `,
+    });
+  }
+
+  async function executeReactivateTenant(button) {
+    setBusy(button, true);
+    try {
+      await api.adminReactivateTenant(button.dataset.tenantId);
+      closeModal();
+      showToast("Empresa reativada", "success", "Estado atualizado pelo Platform Core.");
+      await loadTenants();
+      if (state.selectedTenantId) loadTenantDetail(state.selectedTenantId);
+    } catch (error) {
+      closeModal();
+      showToast("Falha ao reativar", "danger", Core.friendlyError(error));
+    }
+  }
+
+  function openEntitlementModal(tenantId, moduleKey) {
+    const existing = (state.detail?.id === tenantId ? state.detailEntitlements : state.licenseData)?.find((ent) => ent.moduleKey === moduleKey) || null;
+    const seatTypes = state.catalog?.seatTypes || [];
+    const stateOptions = ["ACTIVE", "TRIAL", "NOT_CONTRACTED", "SUSPENDED", "EXPIRED", "CANCELLED"].map((value) => (
+      `<option value="${value}"${(existing?.state || "ACTIVE") === value ? " selected" : ""}>${escapeHtml(LABELS.entitlementState[value])}</option>`
+    )).join("");
+    const toDateInput = (value) => (value ? String(value).slice(0, 10) : "");
+    const quotaRow = (quota = {}) => `
+      <div class="quota-row">
+        <select name="seatTypeKey">
+          ${seatTypes.map((seatType) => `<option value="${escapeHtml(seatType.key)}"${quota.seatTypeKey === seatType.key ? " selected" : ""}>${escapeHtml(LABELS.seatType[seatType.key] || seatType.name || seatType.key)}</option>`).join("")}
+        </select>
+        <input type="number" name="quantityContracted" min="0" max="100000" value="${quota.quantityContracted ?? 1}" aria-label="Quantidade contratada">
+        <input type="number" name="quantityOverageAllowed" min="0" max="100000" value="${quota.quantityOverageAllowed ?? 0}" aria-label="Tolerância de excedente">
+        <button class="button button--table" type="button" data-action="remove-quota-row">Remover</button>
+      </div>
+    `;
+    const quotas = existing?.seatQuotas?.length ? existing.seatQuotas.map(quotaRow).join("") : quotaRow();
+
+    openModal({
+      kicker: existing ? "Atualização de entitlement" : "Concessão de módulo",
+      title: `${moduleName(moduleKey)} — licenciamento`,
+      size: "wide",
+      body: `
+        <form class="form-grid" data-form="entitlement" data-tenant-id="${tenantId}" data-module-key="${moduleKey}" novalidate>
+          <label class="form-field">Estado
+            <select name="state">${stateOptions}</select>
+          </label>
+          <label class="form-field">Fim do trial (opcional)
+            <input type="date" name="trialEndsAt" value="${toDateInput(existing?.trialEndsAt)}">
+          </label>
+          <label class="form-field">Expira em (opcional)
+            <input type="date" name="expiresAt" value="${toDateInput(existing?.expiresAt)}">
+          </label>
+          <div class="form-field form-field--wide">
+            <span>Licenças contratadas por tipo</span>
+            <div class="quota-rows" id="cc-quota-rows">${quotas}</div>
+            <button class="button button--table" type="button" data-action="add-quota-row">Adicionar tipo de licença</button>
+            <small class="form-hint">Tipos, quantidades e tolerâncias seguem o contrato — a aplicação dos limites é feita exclusivamente pelo Core.</small>
+          </div>
+          <p class="form-disclaimer">A alteração é executada pelo Platform Core e registrada em auditoria.</p>
+        </form>
+      `,
+      footer: `
+        <button class="button button--secondary" type="button" data-action="close-modal">Cancelar</button>
+        <button class="button button--primary" type="button" data-action="submit-entitlement">Salvar entitlement</button>
+      `,
+    });
+  }
+
+  async function submitEntitlement(button) {
+    const form = modalBody.querySelector('[data-form="entitlement"]');
+    if (!form || !form.reportValidity()) return;
+    const tenantId = form.dataset.tenantId;
+    const moduleKey = form.dataset.moduleKey;
+    const stateValue = form.querySelector('[name="state"]').value;
+    const trialEndsAt = form.querySelector('[name="trialEndsAt"]').value;
+    const expiresAt = form.querySelector('[name="expiresAt"]').value;
+    const seatQuotas = [...form.querySelectorAll(".quota-row")].map((row) => {
+      const quota = {
+        seatTypeKey: row.querySelector('[name="seatTypeKey"]').value,
+        quantityContracted: Number(row.querySelector('[name="quantityContracted"]').value || 0),
+      };
+      const overage = Number(row.querySelector('[name="quantityOverageAllowed"]').value || 0);
+      if (overage > 0) quota.quantityOverageAllowed = overage;
+      return quota;
+    });
+    const payload = { state: stateValue, seatQuotas };
+    if (trialEndsAt) payload.trialEndsAt = new Date(`${trialEndsAt}T23:59:59-03:00`).toISOString();
+    if (expiresAt) payload.expiresAt = new Date(`${expiresAt}T23:59:59-03:00`).toISOString();
+    setBusy(button, true);
+    try {
+      await api.adminGrantEntitlement(tenantId, moduleKey, payload);
+      closeModal();
+      showToast("Entitlement atualizado", "success", `${moduleName(moduleKey)} — estado ${LABELS.entitlementState[stateValue]}.`);
+      if (state.selectedTenantId === tenantId) loadTenantDetail(tenantId);
+      if (state.licenseTenantId === tenantId) loadLicenses(tenantId);
+    } catch (error) {
+      fieldError(form, Core.friendlyError(error));
+      setBusy(button, false);
+    }
+  }
+
+  function openSuspendEntitlementModal(tenantId, moduleKey) {
+    openModal({
+      kicker: "Ação crítica",
+      title: `Suspender ${moduleName(moduleKey)}`,
+      body: `
+        <form class="form-grid" data-form="suspend-entitlement" data-tenant-id="${tenantId}" data-module-key="${moduleKey}" novalidate>
+          <p>O módulo ficará indisponível para a empresa até nova decisão administrativa. Dados são preservados pelo Core.</p>
+          <label class="form-field form-field--wide">Motivo (obrigatório)
+            <textarea name="reason" required minlength="3" maxlength="500" rows="3"></textarea>
+          </label>
+        </form>
+      `,
+      footer: `
+        <button class="button button--secondary" type="button" data-action="close-modal">Cancelar</button>
+        <button class="button button--danger" type="button" data-action="execute-suspend-entitlement">Suspender módulo</button>
+      `,
+    });
+  }
+
+  async function executeSuspendEntitlement(button) {
+    const form = modalBody.querySelector('[data-form="suspend-entitlement"]');
+    if (!form || !form.reportValidity()) return;
+    const reason = new FormData(form).get("reason").trim();
+    setBusy(button, true);
+    try {
+      await api.adminSuspendEntitlement(form.dataset.tenantId, form.dataset.moduleKey, reason);
+      closeModal();
+      showToast("Módulo suspenso", "warning", "Estado aplicado pelo Core e registrado em auditoria.");
+      loadTenantDetail(form.dataset.tenantId);
+    } catch (error) {
+      fieldError(form, Core.friendlyError(error));
+      setBusy(button, false);
+    }
+  }
+
+  function openCancelEntitlementModal(tenantId, moduleKey) {
+    openModal({
+      kicker: "Ação crítica — confirmação explícita",
+      title: `Cancelar ${moduleName(moduleKey)}`,
+      body: `
+        <form class="form-grid" data-form="cancel-entitlement" data-tenant-id="${tenantId}" data-module-key="${moduleKey}" novalidate>
+          <p>O cancelamento encerra o contrato do módulo. O Core preserva os dados pelo período de retenção informado.</p>
+          <label class="form-field">Retenção de dados (dias, opcional)
+            <input type="number" name="retentionDays" min="0" max="3650" placeholder="90">
+          </label>
+          <label class="form-field form-field--wide">Digite <strong>${escapeHtml(moduleKey)}</strong> para confirmar
+            <input id="cc-critical-confirm" autocomplete="off" placeholder="${escapeHtml(moduleKey)}">
+          </label>
+        </form>
+      `,
+      footer: `
+        <button class="button button--secondary" type="button" data-action="close-modal">Cancelar</button>
+        <button class="button button--danger" type="button" data-action="execute-cancel-entitlement" data-expected="${escapeHtml(moduleKey)}" disabled>Cancelar módulo</button>
+      `,
+    });
+  }
+
+  async function executeCancelEntitlement(button) {
+    const form = modalBody.querySelector('[data-form="cancel-entitlement"]');
+    if (!form) return;
+    const retention = form.querySelector('[name="retentionDays"]').value;
+    const payload = retention ? { retentionDays: Number(retention) } : {};
+    setBusy(button, true);
+    try {
+      await api.adminCancelEntitlement(form.dataset.tenantId, form.dataset.moduleKey, payload);
+      closeModal();
+      showToast("Módulo cancelado", "warning", "Encerramento registrado pelo Platform Core.");
+      loadTenantDetail(form.dataset.tenantId);
+    } catch (error) {
+      fieldError(form, Core.friendlyError(error));
+      setBusy(button, false);
+    }
+  }
+
+  async function openInviteModal(tenantId) {
+    const tenant = state.detail?.id === tenantId ? state.detail : state.tenants.find((t) => t.id === tenantId);
+    openModal({
+      kicker: "Primeiro acesso",
+      title: `Convidar Tenant Admin — ${tenant ? tenant.displayName : ""}`,
+      size: "wide",
+      body: `<div class="cc-skeleton"><span></span><span></span><span></span></div>`,
+      footer: "",
+    });
+
+    /* O contrato só expõe papéis com UUID via GET /tenants/:id/roles (escopo do tenant).
+       Tentamos a chamada; a negativa esperada para o papel de plataforma é tratada como lacuna. */
+    let rolesField;
+    try {
+      const roles = await api.tenantRoles(tenantId);
+      rolesField = `
+        <div class="form-field form-field--wide">
+          <span>Papéis iniciais</span>
+          ${roles.map((role) => `
+            <label class="cc-check"><input type="checkbox" name="roleId" value="${escapeHtml(role.id)}"${role.key === "TENANT_ADMIN" ? " checked" : ""}> ${escapeHtml(role.name)}</label>
+          `).join("")}
+        </div>
+      `;
+    } catch (error) {
+      rolesField = `
+        <label class="form-field form-field--wide">IDs dos papéis iniciais (UUID, um por linha)
+          <textarea name="roleIdsManual" required rows="2" placeholder="uuid do papel TENANT_ADMIN"></textarea>
+          <small class="form-hint">Lacuna de contrato registrada: o catálogo global não expõe UUIDs de papéis e a listagem por tenant exige membership (${escapeHtml(error.code || "PERMISSION_DENIED")}). Informe o UUID do papel gerado no seed/provisionamento.</small>
+        </label>
+      `;
+    }
+
+    modalBody.innerHTML = `
+      <form class="form-grid" data-form="invite" data-tenant-id="${tenantId}" novalidate>
+        <label class="form-field form-field--wide">E-mail do convidado
+          <input type="email" name="email" required placeholder="admin@empresa.com.br">
+        </label>
+        ${rolesField}
+        <p class="form-disclaimer">O convite é emitido pelo Platform Core. O token aparece uma única vez — copie e entregue por canal seguro.</p>
+      </form>
+    `;
+    modalFooter.innerHTML = `
+      <button class="button button--secondary" type="button" data-action="close-modal">Cancelar</button>
+      <button class="button button--primary" type="button" data-action="submit-invite">Emitir convite</button>
+    `;
+  }
+
+  async function submitInvite(button) {
+    const form = modalBody.querySelector('[data-form="invite"]');
+    if (!form || !form.reportValidity()) return;
+    const email = form.querySelector('[name="email"]').value.trim();
+    let roleIds = [...form.querySelectorAll('[name="roleId"]:checked')].map((input) => input.value);
+    const manual = form.querySelector('[name="roleIdsManual"]');
+    if (manual) {
+      roleIds = manual.value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+    }
+    if (!roleIds.length) {
+      fieldError(form, "Informe pelo menos um papel inicial.");
+      return;
+    }
+    setBusy(button, true);
+    try {
+      const result = await api.adminCreateInvitation(form.dataset.tenantId, { email, intendedRoleIds: roleIds });
+      state.sessionInvites.unshift({
+        tenantId: form.dataset.tenantId,
+        email: result.invitation.email,
+        status: result.invitation.status,
+        expiresAt: result.invitation.expiresAt,
+        createdAt: result.invitation.createdAt,
+      });
+      openModal({
+        kicker: "Convite emitido",
+        title: "Token de aceite — exibido uma única vez",
+        body: `
+          <p class="form-disclaimer">Guarde este token com segurança. O Core armazena apenas o hash — não será possível recuperá-lo.</p>
+          <div class="cc-token-box">
+            <code id="cc-invite-token">${escapeHtml(result.token)}</code>
+            <button class="button button--secondary" type="button" data-action="copy-invite-token">Copiar</button>
+          </div>
+          <p>Convite para <strong>${escapeHtml(result.invitation.email)}</strong> · expira em ${formatDate(result.invitation.expiresAt, true)}.</p>
+        `,
+        footer: `<button class="button button--primary" type="button" data-action="close-modal">Concluir</button>`,
+      });
+      showToast("Convite emitido", "success", `Convite registrado para ${result.invitation.email}.`);
+      if (state.selectedTenantId === form.dataset.tenantId) renderView();
+    } catch (error) {
+      fieldError(form, Core.friendlyError(error));
+      setBusy(button, false);
+    }
+  }
+
+  /* ── Popovers / busca / shell ──────────────────────────────────────────── */
+  function closePopovers() {
+    if (notificationPopover) notificationPopover.hidden = true;
+    if (ownerPopover) ownerPopover.hidden = true;
+    document.querySelectorAll('[data-action="toggle-notifications"], [data-action="toggle-owner-menu"]').forEach((button) => button.setAttribute("aria-expanded", "false"));
+  }
+
+  function renderSearchResults(term) {
+    if (!term || term.length < 2 || !state.tenants.length) {
+      searchResults.hidden = true;
+      searchInput.setAttribute("aria-expanded", "false");
+      return;
+    }
+    const lower = term.toLowerCase();
+    const matches = state.tenants.filter((tenant) => tenant.displayName.toLowerCase().includes(lower) || tenant.slug.includes(lower)).slice(0, 6);
+    searchResults.innerHTML = matches.length
+      ? `<span class="search-group-label">Empresas</span>` + matches.map((tenant) => `
+          <button type="button" role="option" data-action="open-company" data-tenant-id="${tenant.id}">
+            <span class="company-monogram company-monogram--tiny">${escapeHtml(tenant.displayName.slice(0, 2).toUpperCase())}</span>
+            <span><strong>${escapeHtml(tenant.displayName)}</strong><small>${escapeHtml(tenant.slug)} · ${escapeHtml(LABELS.tenantStatus[tenant.status] || tenant.status)}</small></span>
+          </button>
+        `).join("")
+      : `<p class="search-empty">Nenhuma empresa corresponde à busca.</p>`;
+    searchResults.hidden = false;
+    searchInput.setAttribute("aria-expanded", "true");
+  }
+
+  /* ── Autenticação ──────────────────────────────────────────────────────── */
+  function showLoginError(message) {
+    if (!loginError) return;
+    loginError.textContent = message;
+    loginError.hidden = !message;
+  }
+
+  function fillIdentity(user) {
+    const initials = (user.fullName || user.email).split(/\s+/).map((part) => part[0]).slice(0, 2).join("").toUpperCase();
+    const roleLabel = LABELS.platformRole[user.platformRole] || user.platformRole;
+    const set = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
+    set("cc-owner-avatar-side", initials);
+    set("cc-owner-avatar-top", initials);
+    set("cc-owner-name-side", user.fullName || user.email);
+    set("cc-owner-role-side", roleLabel);
+    set("cc-owner-first-name", (user.fullName || user.email).split(/\s+/)[0]);
+    set("cc-owner-name-pop", user.fullName || user.email);
+    set("cc-owner-role-pop", roleLabel);
+  }
+
+  async function unlock(user) {
+    state.user = user;
+    fillIdentity(user);
+    document.body.classList.remove("is-access-locked");
+    accessScreen.classList.add("is-leaving");
+    window.setTimeout(() => { accessScreen.hidden = true; }, 420);
+    controlCenter.hidden = false;
+    requestAnimationFrame(() => controlCenter.classList.add("is-entered"));
+    setConnectionState(true);
+    renderView({ focusHeading: true });
+    try { await loadCatalog(); } catch (_) { /* catálogo é enriquecimento visual */ }
+    await loadTenants();
+    loadAudit();
+  }
+
+  function relock(message) {
+    state.user = null;
+    controlCenter.hidden = true;
+    controlCenter.classList.remove("is-entered");
+    accessScreen.hidden = false;
+    accessScreen.classList.remove("is-leaving");
+    document.body.classList.add("is-access-locked");
+    closeModal({ restoreFocus: false });
+    if (message) showLoginError(message);
+  }
+
+  async function handleLogin(event) {
+    event.preventDefault();
+    showLoginError("");
+    setBusy(loginSubmit, true, "Autenticando…");
+    try {
+      const session = await api.login(loginEmail.value.trim(), loginPassword.value);
+      Core.setToken(session.accessToken);
+      const me = await api.me();
+      if (me.user.platformRole !== "PLATFORM_OWNER") {
+        try { await Core.logout(); } catch (error) {
+          console.warn('[Control Center] Revogação após acesso negado não confirmada:', error?.code || 'UNKNOWN_ERROR');
+        }
+        showLoginError("Acesso negado: este console exige o papel Proprietário da plataforma (PLATFORM_OWNER).");
+        return;
+      }
+      loginPassword.value = "";
+      await unlock(me.user);
+    } catch (error) {
+      showLoginError(Core.friendlyError(error));
+      if (error.code === "NETWORK_UNREACHABLE") setConnectionState(false);
+    } finally {
+      setBusy(loginSubmit, false);
+    }
+  }
+
+  let logoutPending = false;
+  async function logout() {
+    if (logoutPending) return;
+    logoutPending = true;
+    controlCenter.hidden = true;
+    try {
+      await Core.logout();
+      relock("Sessão encerrada com segurança.");
+    } catch (error) {
+      console.warn('[Control Center] Logout remoto não confirmado:', error?.code || 'UNKNOWN_ERROR', error?.requestId || '');
+      relock(`Estado local encerrado; revogação no CORE não confirmada. ${Core.friendlyError(error)}`);
+    } finally {
+      Core.clearSession();
+      logoutPending = false;
+    }
+  }
+
+  Core.onUnauthenticated(() => {
+    if (state.user) relock("Sessão expirada — autentique-se novamente.");
+  });
+
+  /* ── Eventos globais ───────────────────────────────────────────────────── */
+  loginForm?.addEventListener("submit", handleLogin);
+
+  document.addEventListener("input", (event) => {
+    if (event.target.id === "cc-critical-confirm") {
+      const executeButton = modalFooter.querySelector("[data-expected]");
+      if (executeButton) executeButton.disabled = event.target.value.trim() !== executeButton.dataset.expected;
+    }
+    if (event.target === searchInput) renderSearchResults(searchInput.value.trim());
+  });
+
+  document.addEventListener("submit", (event) => {
+    const form = event.target.closest("[data-form]");
+    if (!form || form === loginForm) return;
+    event.preventDefault();
+    const handlers = {
+      "company-filters": () => {
+        const data = new FormData(form);
+        state.filters.status = data.get("status");
+        state.filters.search = data.get("search") || "";
+        loadTenants();
+      },
+      "license-tenant": () => {
+        const tenantId = new FormData(form).get("tenantId");
+        if (tenantId) loadLicenses(tenantId);
+      },
+      "audit-filters": () => {
+        state.auditTenantFilter = new FormData(form).get("tenantId");
+        loadAudit({ reset: true });
+      },
+      "api-base": () => {
+        const value = new FormData(form).get("apiBase").trim();
+        if (value) {
+          Core.setApiBase(value);
+          showToast("Endereço salvo", "success", "Recarregue a página para reconectar ao novo endereço.");
+        }
+      },
+    };
+    handlers[form.dataset.form]?.();
+  });
+
+  document.addEventListener("click", (event) => {
+    const viewButton = event.target.closest("[data-view]");
+    if (viewButton && state.user) {
+      closePopovers();
+      navigateTo(viewButton.dataset.view);
+      return;
+    }
+
+    const tabButton = event.target.closest("[data-company-tab]");
+    if (tabButton) {
+      state.companyTab = tabButton.dataset.companyTab;
+      renderView();
+      return;
+    }
+
+    const actionButton = event.target.closest("[data-action]");
+    if (!actionButton) {
+      if (!event.target.closest(".topbar-popover") && !event.target.closest(".global-search")) closePopovers();
+      if (!event.target.closest(".global-search")) { searchResults.hidden = true; }
+      return;
+    }
+    const action = actionButton.dataset.action;
+
+    switch (action) {
+      /* shell */
+      case "toggle-sidebar":
+        state.sidebarCollapsed = !state.sidebarCollapsed;
+        controlCenter.classList.toggle("is-sidebar-collapsed", state.sidebarCollapsed);
+        actionButton.setAttribute("aria-expanded", String(!state.sidebarCollapsed));
+        break;
+      case "open-drawer":
+        document.body.classList.add("is-drawer-open");
+        document.querySelector(".drawer-overlay").hidden = false;
+        break;
+      case "close-drawer":
+        document.body.classList.remove("is-drawer-open");
+        document.querySelector(".drawer-overlay").hidden = true;
+        break;
+      case "toggle-notifications": {
+        const willOpen = notificationPopover.hidden;
+        closePopovers();
+        if (willOpen) {
+          notificationPopover.innerHTML = `<strong>Notificações</strong><span>O contrato atual do Core não expõe um canal de notificações. A trilha de auditoria é a fonte oficial de eventos.</span><hr><button type="button" data-view="security">Abrir auditoria</button>`;
+          notificationPopover.hidden = false;
+          actionButton.setAttribute("aria-expanded", "true");
+        }
+        break;
+      }
+      case "toggle-owner-menu": {
+        const willOpen = ownerPopover.hidden;
+        closePopovers();
+        if (willOpen) {
+          ownerPopover.hidden = false;
+          actionButton.setAttribute("aria-expanded", "true");
+        }
+        break;
+      }
+      case "dismiss-toast": toastRegion.innerHTML = ""; break;
+      case "close-modal": closeModal(); break;
+      case "logout": logout(); break;
+
+      /* navegação de dados */
+      case "open-company":
+        closePopovers();
+        searchResults.hidden = true;
+        if (searchInput) searchInput.value = "";
+        openCompany(actionButton.dataset.tenantId);
+        break;
+      case "back-to-companies":
+        state.selectedTenantId = null;
+        renderView({ focusHeading: true });
+        break;
+      case "retry-tenants": loadTenants(); break;
+      case "retry-company-detail": if (state.selectedTenantId) loadTenantDetail(state.selectedTenantId); break;
+      case "retry-company-audit": if (state.selectedTenantId) loadDetailAudit(state.selectedTenantId); break;
+      case "retry-licenses": if (state.licenseTenantId) loadLicenses(state.licenseTenantId); break;
+      case "retry-audit": loadAudit({ reset: true }); break;
+      case "audit-more": loadAudit({ reset: false }); break;
+      case "clear-company-filters":
+        state.filters = { status: "all", search: "" };
+        loadTenants();
+        break;
+      case "test-connection":
+        setBusy(actionButton, true, "Testando…");
+        api.catalog()
+          .then(() => { setConnectionState(true); showToast("Conexão saudável", "success", `Core acessível em ${Core.apiBase()}.`); })
+          .catch((error) => { setConnectionState(false); showToast("Falha de conexão", "danger", Core.friendlyError(error)); })
+          .finally(() => setBusy(actionButton, false));
+        break;
+
+      /* ações administrativas */
+      case "open-create-tenant": openCreateTenantModal(); break;
+      case "submit-create-tenant": submitCreateTenant(actionButton); break;
+      case "suspend-tenant": openSuspendTenantModal(actionButton.dataset.tenantId); break;
+      case "suspend-tenant-step2": openSuspendTenantConfirm(actionButton.dataset.tenantId); break;
+      case "execute-suspend-tenant": executeSuspendTenant(actionButton); break;
+      case "reactivate-tenant": openReactivateTenantModal(actionButton.dataset.tenantId); break;
+      case "execute-reactivate-tenant": executeReactivateTenant(actionButton); break;
+      case "open-entitlement": openEntitlementModal(actionButton.dataset.tenantId, actionButton.dataset.moduleKey); break;
+      case "submit-entitlement": submitEntitlement(actionButton); break;
+      case "suspend-entitlement": openSuspendEntitlementModal(actionButton.dataset.tenantId, actionButton.dataset.moduleKey); break;
+      case "execute-suspend-entitlement": executeSuspendEntitlement(actionButton); break;
+      case "cancel-entitlement": openCancelEntitlementModal(actionButton.dataset.tenantId, actionButton.dataset.moduleKey); break;
+      case "execute-cancel-entitlement": executeCancelEntitlement(actionButton); break;
+      case "open-invite": openInviteModal(actionButton.dataset.tenantId); break;
+      case "submit-invite": submitInvite(actionButton); break;
+      case "add-quota-row": {
+        const rows = document.getElementById("cc-quota-rows");
+        if (rows) {
+          const template = rows.querySelector(".quota-row");
+          const clone = template.cloneNode(true);
+          clone.querySelectorAll("input").forEach((input) => { input.value = input.name === "quantityContracted" ? 1 : 0; });
+          rows.appendChild(clone);
+        }
+        break;
+      }
+      case "remove-quota-row": {
+        const rows = document.getElementById("cc-quota-rows");
+        if (rows && rows.querySelectorAll(".quota-row").length > 1) actionButton.closest(".quota-row").remove();
+        break;
+      }
+      case "copy-invite-token": {
+        const token = document.getElementById("cc-invite-token")?.textContent || "";
+        navigator.clipboard?.writeText(token).then(
+          () => showToast("Token copiado", "success", "Entregue por canal seguro — não será exibido novamente."),
+          () => showToast("Copie manualmente", "warning", "Seu navegador bloqueou a cópia automática.")
+        );
+        break;
+      }
+      default: break;
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    if (!modalLayer.hidden) { closeModal(); return; }
+    closePopovers();
+    searchResults.hidden = true;
+  });
+
+  /* ── Boot ──────────────────────────────────────────────────────────────── */
+  (async function boot() {
+    const hadAccessToken = Boolean(Core.getToken());
+    try {
+      const me = await api.me();
+      if (me.user.platformRole !== "PLATFORM_OWNER") {
+        showLoginError("Sessão sem papel de plataforma — autentique-se com uma conta Proprietária.");
+        return;
+      }
+      await unlock(me.user);
+    } catch (error) {
+      if (error.code === "NETWORK_UNREACHABLE") setConnectionState(false);
+      showLoginError(error.status === 401 && !hadAccessToken ? "" : Core.friendlyError(error));
+    }
+  })();
+})();

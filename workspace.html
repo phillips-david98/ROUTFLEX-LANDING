@@ -9,7 +9,41 @@
   <link rel="stylesheet" href="workspace.css">
 </head>
 <body>
-  <div class="workspace-shell">
+  <div class="demo-flag" id="demoFlag" hidden aria-hidden="true">MODO DEMONSTRAÇÃO · dados fictícios</div>
+
+  <section class="ws-auth" id="authView" aria-labelledby="authTitle">
+    <div class="ws-auth-card">
+      <div class="ws-auth-brand">
+        <img src="assets/logo.png" alt="ROUTflex" width="40" height="40">
+        <span><strong><span>ROUT</span>flex</strong><small>Workspace</small></span>
+      </div>
+      <h1 id="authTitle">Acesse sua organização</h1>
+      <p class="ws-auth-sub">Autenticação corporativa via ROUTflex Platform Core.</p>
+
+      <form id="loginForm" autocomplete="on" novalidate>
+        <label class="ws-field">
+          <span>E-mail corporativo</span>
+          <input id="loginEmail" name="email" type="email" autocomplete="username" required placeholder="voce@empresa.com.br">
+        </label>
+        <label class="ws-field">
+          <span>Senha</span>
+          <input id="loginPassword" name="password" type="password" autocomplete="current-password" required placeholder="••••••••••••">
+        </label>
+        <p class="ws-form-error" id="loginError" role="alert" hidden></p>
+        <button type="submit" id="loginSubmit">Entrar no Workspace</button>
+      </form>
+      <p class="ws-auth-note">O acesso a módulos, licenças e equipes é resolvido pelo Platform Core. Nenhuma permissão é concedida pelo navegador.</p>
+    </div>
+
+    <div class="ws-auth-card" id="tenantPicker" hidden>
+      <h1>Escolha a organização</h1>
+      <p class="ws-auth-sub">Seu usuário possui vínculo com mais de uma organização.</p>
+      <div class="ws-tenant-list" id="tenantList" role="list"></div>
+      <button class="secondary" type="button" id="pickerLogout">Sair</button>
+    </div>
+  </section>
+
+  <div class="workspace-shell" id="workspaceShell" hidden>
     <aside class="workspace-sidebar" aria-label="Navegação do Workspace">
       <a class="workspace-brand" href="#workspace" aria-label="ROUTflex Workspace">
         <img src="assets/logo.png" alt="ROUTflex" width="36" height="36">
@@ -51,6 +85,10 @@
       </nav>
 
       <div class="sidebar-session">
+        <div class="session-identity" id="sessionIdentity" hidden>
+          <span class="session-avatar" id="sessionAvatar" aria-hidden="true">–</span>
+          <span class="session-copy"><strong id="sessionUserName">—</strong><small id="sessionUserEmail">—</small></span>
+        </div>
         <button class="session-logout" id="logoutTrigger" type="button">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/><path d="M12 3h7a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-7"/></svg>
           Encerrar sessão
@@ -59,141 +97,78 @@
     </aside>
 
     <main class="workspace-main">
+      <div class="ws-banner-region" id="wsBanner" aria-live="polite"></div>
+
       <header class="workspace-topbar" id="workspace">
         <div>
           <span class="topbar-kicker">ROUTflex Workspace</span>
           <h1>Central administrativa do ecossistema ROUTflex</h1>
         </div>
-        <div class="company-strip" aria-label="Contexto da empresa">
-          <div><span>Empresa</span><strong>Distribuidora Alfa LTDA</strong></div>
-          <div><span>Plano</span><strong>Enterprise</strong></div>
-          <div><span>Ambiente</span><strong>Produção</strong></div>
+        <div class="company-strip" aria-label="Contexto da organização">
+          <div><span>Organização</span><strong id="stripTenant">—</strong></div>
+          <div><span>Status</span><strong id="stripStatus">—</strong></div>
+          <div><span>Seu vínculo</span><strong id="stripMembership">—</strong></div>
         </div>
       </header>
 
-      <section class="company-profile-card" aria-label="Resumo institucional da empresa">
+      <section class="company-profile-card" aria-label="Resumo institucional da organização">
         <div class="company-profile-main">
-          <span class="company-avatar">DA</span>
+          <span class="company-avatar" id="tenantAvatar">—</span>
           <div>
             <span class="profile-label">Organização</span>
-            <h2>Distribuidora Alfa LTDA</h2>
-            <p>Ambiente oficial para administração do ecossistema ROUTflex.</p>
+            <h2 id="tenantName">Carregando…</h2>
+            <p id="tenantTagline">Sincronizando com o Platform Core.</p>
+            <button class="secondary ws-switch-tenant" type="button" id="switchTenant" hidden>Trocar organização</button>
           </div>
         </div>
-        <div class="company-profile-facts">
-          <div><span>Plano</span><strong>Enterprise</strong></div>
-          <div><span>Cliente desde</span><strong>Maio/2026</strong></div>
-          <div><span>Usuários ativos</span><strong>14</strong></div>
-          <div><span>Módulos</span><strong>3 contratados</strong></div>
-          <div><span>Ambiente</span><strong>Produção</strong></div>
+        <div class="company-profile-facts" id="tenantFacts">
+          <div><span>Identificador</span><strong id="factSlug">—</strong></div>
+          <div><span>Status</span><strong id="factStatus">—</strong></div>
+          <div><span>Vínculo</span><strong id="factMembership">—</strong></div>
+          <div><span>Papéis</span><strong id="factRoles">—</strong></div>
+          <div><span>Unidades visíveis</span><strong id="factUnits">—</strong></div>
         </div>
       </section>
 
-      <section class="metrics-grid" aria-label="Indicadores do Workspace">
-        <article class="metric-card"><span>Usuários Ativos</span><strong>14</strong><small>de 20 licenças</small></article>
-        <article class="metric-card"><span>Módulos Contratados</span><strong>3</strong><small>Planning, OPS e Palm</small></article>
-        <article class="metric-card"><span>Integrações</span><strong>5</strong><small>2 em monitoramento</small></article>
-        <article class="metric-card"><span>Próxima Renovação</span><strong>15 dias</strong><small>ciclo enterprise</small></article>
-      </section>
+      <section class="metrics-grid" id="metricsGrid" aria-label="Indicadores do Workspace"></section>
 
       <section class="workspace-section" id="modulos">
         <div class="section-title">
           <span>Módulos ROUTflex</span>
           <h2>Controle central dos produtos contratados</h2>
         </div>
-        <div class="module-grid">
-          <article class="module-card module-active">
-            <div class="module-head"><span class="module-icon planning">P</span><span class="status active">Ativo</span></div>
-            <h3>ROUTflex Planning</h3>
-            <p>Planejamento territorial, balanceamento de carteiras e roteirização operacional.</p>
-            <dl class="module-meta">
-              <div><dt>Último acesso</dt><dd>Hoje às 08:42</dd></div>
-              <div><dt>Usuários</dt><dd>14</dd></div>
-              <div><dt>Status</dt><dd>Operacional</dd></div>
-            </dl>
-            <button type="button">Acessar</button>
-          </article>
-          <article class="module-card module-active">
-            <div class="module-head"><span class="module-icon ops">O</span><span class="status active">Ativo</span></div>
-            <h3>ROUTflex OPS</h3>
-            <p>Gestão de execução, auditoria de atividades e controle da operação de campo.</p>
-            <dl class="module-meta">
-              <div><dt>Último acesso</dt><dd>Hoje às 08:31</dd></div>
-              <div><dt>Usuários</dt><dd>9</dd></div>
-              <div><dt>Status</dt><dd>Operacional</dd></div>
-            </dl>
-            <button type="button">Acessar</button>
-          </article>
-          <article class="module-card module-active">
-            <div class="module-head"><span class="module-icon palm">Pa</span><span class="status active">Ativo</span></div>
-            <h3>ROUTflex Palm</h3>
-            <p>Mobilidade em campo, telemetria e rotina operacional para equipes externas.</p>
-            <dl class="module-meta">
-              <div><dt>Último acesso</dt><dd>Hoje às 07:58</dd></div>
-              <div><dt>Usuários</dt><dd>12</dd></div>
-              <div><dt>Status</dt><dd>Operacional</dd></div>
-            </dl>
-            <button type="button">Gerenciar</button>
-          </article>
-          <article class="module-card">
-            <div class="module-head"><span class="module-icon sales">S</span><span class="status available">Disponível</span></div>
-            <h3>ROUTflex Sales</h3>
-            <p>Gestão comercial integrada ao ecossistema operacional ROUTflex.</p>
-            <dl class="module-meta">
-              <div><dt>Último acesso</dt><dd>Não contratado</dd></div>
-              <div><dt>Usuários</dt><dd>0</dd></div>
-              <div><dt>Status</dt><dd>Disponível</dd></div>
-            </dl>
-            <button type="button" class="secondary">Contratar</button>
-          </article>
-        </div>
+        <div class="module-grid" id="moduleGrid"></div>
+        <p class="ws-section-note">Os estados exibidos refletem exatamente as contratações e licenças resolvidas pelo Platform Core.</p>
       </section>
 
       <div class="workspace-columns">
         <section class="workspace-section" id="usuarios">
-          <div class="section-title compact">
-            <span>Gestão de Usuários</span>
-            <h2>Perfis e acessos</h2>
+          <div class="section-title compact ws-title-row">
+            <div>
+              <span>Gestão de Equipe</span>
+              <h2>Usuários, convites e licenças individuais</h2>
+            </div>
+            <div class="ws-title-actions" id="teamActions"></div>
           </div>
-          <div class="table-card">
-            <table>
-              <thead>
-                <tr><th>Nome</th><th>Cargo</th><th>Perfil</th><th>Status</th></tr>
-              </thead>
-              <tbody>
-                <tr><td>João Silva</td><td>Administrador</td><td>Admin</td><td><span class="status active">Ativo</span></td></tr>
-                <tr><td>Maria Souza</td><td>Gestora Comercial</td><td>Gestora</td><td><span class="status active">Ativo</span></td></tr>
-                <tr><td>Carlos Mendes</td><td>Operador</td><td>Operação</td><td><span class="status active">Ativo</span></td></tr>
-                <tr><td>Ana Ribeiro</td><td>Financeiro</td><td>Leitura</td><td><span class="status paused">Pendente</span></td></tr>
-              </tbody>
-            </table>
-          </div>
+          <div id="teamContent"></div>
+          <div id="invitesBlock"></div>
         </section>
 
         <section class="workspace-section" id="seguranca">
           <div class="section-title compact">
             <span>Segurança</span>
-            <h2>Controles corporativos</h2>
+            <h2>Auditoria da organização</h2>
           </div>
-          <div class="security-card">
-            <div><span>2FA</span><strong>Ativo</strong></div>
-            <div><span>SSO</span><strong>Em Breve</strong></div>
-            <div><span>Logs de Auditoria</span><strong>Disponível</strong></div>
-            <div><span>Política de Senha</span><strong>Ativa</strong></div>
-          </div>
+          <div id="securityContent"></div>
         </section>
       </div>
 
       <section class="workspace-section license-section" id="licenciamento">
         <div class="section-title compact">
           <span>Licenciamento</span>
-          <h2>Plano atual e uso de licenças</h2>
+          <h2>Contratações e consumo de licenças</h2>
         </div>
-        <div class="license-card">
-          <div><span>Plano Atual</span><strong>Enterprise</strong></div>
-          <div><span>Licenças Utilizadas</span><strong>14 / 20</strong><em><i style="width:70%"></i></em></div>
-          <div><span>Próxima Renovação</span><strong>15 dias</strong></div>
-        </div>
+        <div id="licenseContent"></div>
       </section>
 
       <section class="workspace-section" id="marketplace">
@@ -201,93 +176,65 @@
           <span>Marketplace ROUTflex</span>
           <h2>Expanda o ecossistema quando a operação exigir</h2>
         </div>
-        <div class="market-grid">
-          <article class="market-card">
-            <span class="market-status">Disponível para contratação</span>
-            <h3>ROUTflex Sales</h3>
-            <p>Gestão comercial conectada aos dados de campo.</p>
-            <small><strong>Benefício:</strong> pipeline comercial alinhado à execução operacional.</small>
-            <div><button>Contratar</button><button class="secondary">Solicitar Demonstração</button></div>
-          </article>
-          <article class="market-card">
-            <span class="market-status">Disponível para contratação</span>
-            <h3>ROUTflex BI</h3>
-            <p>Camada executiva de indicadores e inteligência operacional.</p>
-            <small><strong>Benefício:</strong> indicadores avançados e analytics corporativo.</small>
-            <div><button>Contratar</button><button class="secondary">Solicitar Demonstração</button></div>
-          </article>
-          <article class="market-card">
-            <span class="market-status">Disponível para contratação</span>
-            <h3>ROUTflex Supply Chain</h3>
-            <p>Visibilidade de cadeia, abastecimento e capacidade logística.</p>
-            <small><strong>Benefício:</strong> maior previsibilidade entre demanda e entrega.</small>
-            <div><button>Contratar</button><button class="secondary">Solicitar Demonstração</button></div>
-          </article>
-          <article class="market-card">
-            <span class="market-status">Disponível para contratação</span>
-            <h3>Telemetria Avançada</h3>
-            <p>Monitoramento ampliado de ativos, rotas e execução em campo.</p>
-            <small><strong>Benefício:</strong> leitura operacional mais precisa em tempo real.</small>
-            <div><button>Contratar</button><button class="secondary">Solicitar Demonstração</button></div>
-          </article>
-        </div>
+        <div class="market-grid" id="marketContent"></div>
+        <p class="ws-section-note">Somente módulos do catálogo oficial do Platform Core são ofertados aqui. A contratação é concluída pelo time comercial — sem cobrança pelo navegador.</p>
       </section>
 
       <section class="workspace-section settings-section" id="configuracoes">
         <div class="section-title compact">
           <span>Configurações</span>
-          <h2>Preferências do ambiente</h2>
+          <h2>Dados corporativos da organização</h2>
         </div>
-        <div class="settings-card">
-          <div><strong>Domínio corporativo</strong><span>distribuidoraalfa.com.br</span></div>
-          <div><strong>Região de dados</strong><span>Brasil</span></div>
-          <div><strong>Suporte</strong><span>Enterprise Priority</span></div>
-        </div>
+        <div id="settingsContent"></div>
       </section>
     </main>
   </div>
 
-  <button class="assistant-trigger" id="assistantTrigger" type="button" aria-expanded="false" aria-controls="assistantPanel">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 20 7.5v9L12 21l-8-4.5v-9L12 3Z"/><path d="M8.5 12h7"/><path d="M12 8.5v7"/></svg>
-    Assistant
+  <button class="routex-trigger" id="routexTrigger" type="button" aria-label="Abrir ROUTEX" aria-expanded="false" aria-controls="routexPanel">
+    <span class="routex-orb" aria-hidden="true">
+      <span class="routex-plasma routex-plasma-back"></span>
+      <span class="routex-liquid-mass">
+        <span class="routex-core routex-core-deep"></span>
+        <span class="routex-core routex-core-mid"></span>
+        <span class="routex-core routex-core-light"></span>
+      </span>
+      <span class="routex-plasma routex-plasma-front"></span>
+    </span>
+    <span class="routex-sr-only">Abrir ROUTEX</span>
   </button>
 
-  <section class="assistant-panel" id="assistantPanel" aria-labelledby="assistantTitle" aria-hidden="true">
-    <div class="assistant-header">
-      <span class="assistant-mark" aria-hidden="true">
-        <svg viewBox="0 0 24 24"><path d="M12 3 20 7.5v9L12 21l-8-4.5v-9L12 3Z"/><path d="M8.5 12h7"/><path d="M12 8.5v7"/></svg>
-      </span>
-      <div>
-        <span class="assistant-kicker">ROUTflex Assistant</span>
-        <h2 id="assistantTitle">ROUTflex Assistant</h2>
-        <p><span class="assistant-online-dot"></span>Online · Posso ajudar você a navegar pelo ecossistema ROUTflex.</p>
+  <section class="routex-panel" id="routexPanel" aria-labelledby="routexTitle" aria-hidden="true" inert>
+    <div class="routex-header">
+      <div class="routex-identity">
+        <h2 id="routexTitle">ROUTEX</h2>
+        <p>Assistente do ecossistema · Workspace</p>
       </div>
-      <button class="assistant-close" id="assistantClose" type="button" aria-label="Fechar ROUTflex Assistant">
+      <button class="routex-close" id="routexClose" type="button" aria-label="Fechar ROUTEX">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
       </button>
     </div>
 
-    <div class="assistant-conversation" id="assistantConversation" aria-live="polite">
-      <article class="assistant-message assistant-message-system">
-        <p>Olá, Phillips.</p>
-        <p>Sou o ROUTflex Assistant. Posso ajudar você a entender módulos, licenças, recursos e funcionalidades do ecossistema ROUTflex.</p>
+    <div class="routex-conversation" id="routexConversation" aria-live="polite">
+      <article class="routex-message routex-message-system">
+        <p id="routexGreeting">Olá.</p>
+        <p>Sou o ROUTEX. Posso ajudar você a entender módulos, licenças, recursos e funcionalidades do ecossistema ROUTflex.</p>
         <p>Como posso ajudar hoje?</p>
       </article>
     </div>
 
-    <div class="assistant-actions" id="assistantQuickActions" aria-label="Ações rápidas do Assistente">
-      <button type="button" data-assistant-topic="modulos">Módulos</button>
-      <button type="button" data-assistant-topic="plano">Meu Plano</button>
-      <button type="button" data-assistant-topic="licencas">Licenciamento</button>
-      <button type="button" data-assistant-topic="seguranca">Segurança</button>
-      <button type="button" data-assistant-topic="marketplace">Marketplace</button>
+    <div class="routex-actions" id="routexQuickActions" aria-label="Ações rápidas do ROUTEX">
+      <button type="button" data-routex-topic="modulos">Módulos</button>
+      <button type="button" data-routex-topic="plano">Meu Plano</button>
+      <button type="button" data-routex-topic="licencas">Licenciamento</button>
+      <button type="button" data-routex-topic="seguranca">Segurança</button>
+      <button type="button" data-routex-topic="marketplace">Marketplace</button>
     </div>
 
-    <form class="assistant-question" id="assistantQuestionForm" autocomplete="off">
-      <label for="assistantQuestion">Pergunte ao Assistant</label>
+    <form class="routex-question" id="routexQuestionForm" autocomplete="off">
+      <label class="routex-sr-only" for="routexQuestion">Pergunte ao ROUTEX</label>
       <div>
-        <input id="assistantQuestion" type="text" placeholder="Pergunte algo sobre a plataforma...">
-        <button type="submit" aria-label="Enviar pergunta">
+        <input id="routexQuestion" type="text" placeholder="Pergunte algo sobre a plataforma...">
+        <button type="submit" aria-label="Enviar pergunta ao ROUTEX">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4 20-7Z"/></svg>
         </button>
       </div>
@@ -298,7 +245,7 @@
     <div class="logout-backdrop" data-logout-cancel></div>
     <div class="logout-dialog">
       <h2 id="logoutTitle">Encerrar sessão?</h2>
-      <p>Você será redirecionado para a página inicial da ROUTflex.</p>
+      <p>Sua sessão no Platform Core será encerrada neste navegador.</p>
       <div class="logout-actions">
         <button class="secondary" type="button" data-logout-cancel>Cancelar</button>
         <button type="button" data-logout-confirm>Encerrar sessão</button>
@@ -306,6 +253,19 @@
     </div>
   </div>
 
+  <div class="logout-modal ws-modal" id="wsModal" role="dialog" aria-modal="true" aria-labelledby="wsModalTitle" hidden>
+    <div class="logout-backdrop" data-ws-modal-close></div>
+    <div class="logout-dialog ws-modal-dialog">
+      <h2 id="wsModalTitle">—</h2>
+      <div class="ws-modal-body" id="wsModalBody"></div>
+      <div class="logout-actions" id="wsModalActions"></div>
+    </div>
+  </div>
+
+  <div class="ws-toast-region" id="wsToastRegion" role="status" aria-live="polite" aria-atomic="true"></div>
+
+  <script src="core-client.js"></script>
+  <script src="core-fixtures.js"></script>
   <script src="workspace.js"></script>
 </body>
 </html>
