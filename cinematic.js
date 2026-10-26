@@ -21,26 +21,23 @@
   const clamp = value => Math.max(0, Math.min(1, value));
   const smooth = (start, end, value) => { const t = clamp((value - start) / (end - start)); return t * t * (3 - 2 * t); };
 
-  // Exit finishes before the next entrance. Ranges are fractions of the scroll travel.
+  // Short vertical dissolves leave generous reading plateaus. Native scroll stays in control.
   const scenes = [
-    { name: 'planning', label: 'Planning', range: [0, 0, .27, .30], direction: 1, stop: .12 },
-    { name: 'sales', label: 'Sales', range: [.30, .33, .48, .51], direction: -1, stop: .39 },
-    { name: 'palm', label: 'Palm', range: [.51, .54, .69, .72], direction: 1, stop: .60 },
-    { name: 'ops', label: 'Ops', range: [.72, .75, 1, 1], direction: -1, stop: .82 },
+    { name: 'planning', label: 'Planning', range: [0, 0, .255, .30], stop: .12 },
+    { name: 'sales', label: 'Sales', range: [.30, .345, .465, .51], stop: .39 },
+    { name: 'palm', label: 'Palm', range: [.51, .555, .675, .72], stop: .60 },
+    { name: 'ops', label: 'Ops', range: [.72, .765, 1, 1], stop: .82 },
   ].map(scene => ({ ...scene, el: stage.querySelector(`[data-cinematic-scene="${scene.name}"]`) }));
   let frame = 0, dirty = true, disposed = false, top = 0, travel = 1, height = 1;
   let lastProgress = -1, activeIndex = -1, lastPercent = -1, lastActive = false;
+  let lastEntrance = -1;
   let videoFailed = false;
   let timeline = null, trigger = null, observer = null;
 
-  // VIDEO: native autoplay/loop; retain the existing dissolve over the source's black cut.
-  function syncDecodedFrame() {
+  // VIDEO: the prepared film owns its transitions; keep native autoplay/loop.
+  function onVideoReady() {
     if (videoFailed) return;
-    if (video.readyState >= 2 && !videoFailed) status.hidden = true;
-    // Follow playback time only; this treatment never changes the video's position.
-    const cut = smooth(2.65, 2.85, video.currentTime) * (1 - smooth(3.25, 3.55, video.currentTime));
-    media.style.opacity = String(1 - cut);
-    schedule();
+    if (video.readyState >= 2) status.hidden = true;
   }
   function onVideoError() {
     videoFailed = true;
@@ -65,10 +62,10 @@
       timeline.to({}, { duration: 1 }); // Includes the final reading/release interval.
       scenes.forEach((scene, i) => {
         const [enter, full, leave, gone] = scene.range;
-        const amplitude = compact.matches ? 24 : 64;
-        gsap.set(scene.el, { x: i ? scene.direction * amplitude : 0, opacity: i ? 0 : 1, scale: i ? .97 : 1, filter: `blur(${i && !compact.matches ? 7 : 0}px)` });
-        if (i) timeline.to(scene.el, { x: 0, opacity: 1, scale: 1, filter: 'blur(0px)', duration: full - enter, ease: 'power2.out' }, enter);
-        if (gone > leave) timeline.to(scene.el, { x: -scene.direction * amplitude, opacity: 0, scale: 1.02, filter: `blur(${compact.matches ? 0 : 6}px)`, duration: gone - leave, ease: 'power2.in' }, leave);
+        const amplitude = compact.matches ? 14 : 28;
+        gsap.set(scene.el, { y: i ? amplitude : 0, opacity: i ? 0 : 1 });
+        if (i) timeline.to(scene.el, { y: 0, opacity: 1, duration: full - enter, ease: 'power2.out' }, enter);
+        if (gone > leave) timeline.to(scene.el, { y: -amplitude * .6, opacity: 0, duration: gone - leave, ease: 'power2.in' }, leave);
       });
       trigger = ScrollTrigger.create({
         trigger: stage, start: () => top, end: () => top + travel,
@@ -85,10 +82,9 @@
       const [enter, full, leave, gone] = scene.range;
       const entrance = i ? 1 - Math.pow(1 - clamp((progress - enter) / (full - enter)), 3) : 1;
       const departure = gone > leave ? Math.pow(clamp((progress - leave) / (gone - leave)), 3) : 0;
-      const x = scene.direction * (compact.matches ? 24 : 64) * (1 - entrance - departure);
+      const y = (compact.matches ? 14 : 28) * (1 - entrance - departure * .6);
       scene.el.style.opacity = String(entrance * (1 - departure));
-      scene.el.style.transform = `translate3d(${x}px,0,0) scale(${.97 + entrance * .03 + departure * .02})`;
-      scene.el.style.filter = `blur(${compact.matches ? 0 : (1 - entrance) * 7 + departure * 6}px)`;
+      scene.el.style.transform = `translate3d(0,${y}px,0)`;
     });
   }
 
@@ -141,6 +137,13 @@
     frame = 0;
     if (disposed || document.hidden) return;
     if (dirty) { measure(); trigger?.refresh(); }
+    // Reveal within the approach to the existing sticky section; no extra pin or scroll distance.
+    const entrance = reduced.matches ? 1 : smooth(top - height * .85, top - height * .1, window.scrollY);
+    if (entrance !== lastEntrance) {
+      stage.style.setProperty('--rfx-intro-reveal', entrance.toFixed(4));
+      stage.style.setProperty('--rfx-intro-lift', `${((1 - entrance) * 28).toFixed(2)}px`);
+      lastEntrance = entrance;
+    }
     // Scroll positions are quantized to device pixels; settle both endpoints exactly.
     const distance = window.scrollY - top;
     const progress = reduced.matches || distance <= 1 ? 0 : distance >= travel - 1 ? 1 : clamp(distance / travel);
@@ -176,8 +179,7 @@
   stage.classList.add('rfx-cinematic-stage--ready');
   listen(previous, 'click', () => goToModule(-1));
   listen(next, 'click', () => goToModule(1));
-  listen(video, 'loadeddata', syncDecodedFrame);
-  listen(video, 'timeupdate', syncDecodedFrame);
+  listen(video, 'loadeddata', onVideoReady);
   listen(video, 'progress', schedule);
   listen(video, 'canplay', schedule);
   listen(video, 'error', onVideoError);
@@ -198,6 +200,6 @@
   }
   document.fonts?.ready.then(invalidate);
   syncPreferences();
-  if (video.readyState >= 2) syncDecodedFrame();
+  if (video.readyState >= 2) onVideoReady();
   checkMediaState();
 })();

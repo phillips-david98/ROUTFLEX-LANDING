@@ -12,10 +12,13 @@
   <meta property="og:locale" content="pt_BR">
   <title>ROUTflex HUB | Central Operacional Enterprise</title>
   <link rel="icon" type="image/png" href="assets/logo.png">
+  <link rel="preload" href="https://fonts.gstatic.com/s/dmserifdisplay/v17/-nFnOHM81r4j6k0gjAW3mujVU2B2G_Bx0g.woff2" as="font" type="font/woff2" crossorigin referrerpolicy="no-referrer">
   <link rel="stylesheet" href="styles.css">
   <noscript><style>.rfx-brand-intro{display:none}</style></noscript>
+  <meta name="referrer" content="no-referrer">
+  <link rel="stylesheet" href="inline-auth.css">
 </head>
-<body>
+<body class="rfx-landing">
   <!-- BRAND INTRO (scaffold) — brief one-time signature shown before the Hero.
        Isolated under rfx-brand-intro-*; timing/skip logic in the inline script
        right below (sessionStorage "rfx:intro-seen" + prefers-reduced-motion). -->
@@ -61,7 +64,7 @@
         </button>
         <nav class="main-nav" id="main-nav" aria-label="Navegacao principal">
           <a class="is-active" href="#solucoes" aria-current="page">Soluções</a>
-          <a href="#workspace">Workspace</a>
+          <a href="#acesso">Acessar ROUTflex</a>
           <a href="#resultados">Resultados</a>
           <a href="#contato">Contato</a>
         </nav>
@@ -76,10 +79,218 @@
       <section class="hero-section" aria-label="ROUTflex HUB central operacional enterprise" aria-roledescription="carrossel" data-hero-carousel>
         <div class="hero-slides" aria-hidden="true">
           <div class="hero-slide hero-slide--original is-active" data-hero-slide>
-            <canvas class="hero-canvas" id="heroCanvas"></canvas>
-            <div class="hero-bg">
-              <span class="hero-orb orb-1"></span>
-              <span class="hero-orb orb-2"></span>
+            <div class="hero-logistics-scene">
+              <img class="hero-opening-image" src="assets/Rede%20Global%20de%20Log%C3%ADstica%20Noturna.png" alt="" width="1672" height="941" loading="eager" fetchpriority="high" decoding="async">
+              <svg class="hero-logistics-flow" viewBox="0 0 1672 941" preserveAspectRatio="xMidYMax slice" focusable="false" aria-hidden="true">
+                <defs>
+                  <path id="hero-logistics-path-northCentral" pathLength="100" d="M921.5 189C926.25 192.17 941.08 201.67 950 208C958.92 214.33 966.67 220.67 975 227C983.33 233.33 991.67 239.17 1000 246C1008.33 252.83 1016.67 260.67 1025 268C1033.33 275.33 1041.67 283 1050 290C1058.33 297 1066.67 303.67 1075 310C1083.33 316.33 1092.5 323 1100 328C1107.5 333 1113.73 336.35 1120 340C1126.27 343.65 1134.67 348.25 1137.6 349.9"/>
+                  <path id="hero-logistics-path-andesSoutheast" pathLength="100" d="M920.6 329.8C923.83 329.83 933.43 329.97 940 330C946.57 330.03 953.33 329.67 960 330C966.67 330.33 973.33 331.17 980 332C986.67 332.83 993.33 333.83 1000 335C1006.67 336.17 1013.33 337.33 1020 339C1026.67 340.67 1033.33 342.83 1040 345C1046.67 347.17 1053.33 349.17 1060 352C1066.67 354.83 1073.33 358.17 1080 362C1086.67 365.83 1093.33 369.83 1100 375C1106.67 380.17 1113.33 386.5 1120 393C1126.67 399.5 1133.33 406.5 1140 414C1146.67 421.5 1153.95 430.88 1160 438C1166.05 445.12 1173.58 453.58 1176.3 456.7"/>
+                  <path id="hero-logistics-path-centralSoutheast" pathLength="100" d="M1137.6 349.9C1139.33 352.42 1144.77 359.98 1148 365C1151.23 370.02 1154.33 375 1157 380C1159.67 385 1162 390 1164 395C1166 400 1167.67 405 1169 410C1170.33 415 1171 420 1172 425C1173 430 1174.28 434.72 1175 440C1175.72 445.28 1176.08 453.92 1176.3 456.7"/>
+                  <path id="hero-logistics-path-southeastSouth" pathLength="100" d="M1176.3 456.7C1173.58 458.08 1166.05 463.28 1160 465C1153.95 466.72 1146.67 465 1140 467C1133.33 469 1126.67 473 1120 477C1113.33 481 1106.67 484.83 1100 491C1093.33 497.17 1085 505.5 1080 514C1075 522.5 1073 530.92 1070 542C1067 553.08 1063.33 574.08 1062 580.5"/>
+                  <path id="hero-logistics-path-westSoutheast" pathLength="100" d="M940.1 546.8C943.42 540.67 953.35 518.47 960 510C966.65 501.53 973.33 500 980 496C986.67 492 993.33 490 1000 486C1006.67 482 1013.33 476.33 1020 472C1026.67 467.67 1033.33 463.17 1040 460C1046.67 456.83 1053.33 455.17 1060 453C1066.67 450.83 1073.33 448.67 1080 447C1086.67 445.33 1093.33 443.67 1100 443C1106.67 442.33 1113.33 442.5 1120 443C1126.67 443.5 1133.33 445 1140 446C1146.67 447 1153.95 447.22 1160 449C1166.05 450.78 1173.58 455.42 1176.3 456.7"/>
+                  <path id="hero-logistics-path-atlanticCentral" pathLength="100" d="M1180.2 174.4C1179.67 178.67 1178.7 190.73 1177 200C1175.3 209.27 1172.67 220 1170 230C1167.33 240 1164 250 1161 260C1158 270 1154.83 280 1152 290C1149.17 300 1146 312.5 1144 320C1142 327.5 1141.07 330.02 1140 335C1138.93 339.98 1138 347.42 1137.6 349.9"/>
+                  <path id="hero-logistics-path-andesCentral" pathLength="100" d="M920.6 329.8C923.83 328.33 933.43 323.97 940 321C946.57 318.03 953.33 314.67 960 312C966.67 309.33 973.33 306.83 980 305C986.67 303.17 993.33 302 1000 301C1006.67 300 1013.33 299 1020 299C1026.67 299 1033.33 300 1040 301C1046.67 302 1053.33 302.83 1060 305C1066.67 307.17 1073.33 310.17 1080 314C1086.67 317.83 1093.33 323.67 1100 328C1106.67 332.33 1113.73 336.35 1120 340C1126.27 343.65 1134.67 348.25 1137.6 349.9"/>
+                  <path id="hero-logistics-path-pacificWest" pathLength="100" d="M661.2 659.1C666 657.75 680.2 654.18 690 651C699.8 647.82 710 643.67 720 640C730 636.33 740 633 750 629C760 625 770 620.5 780 616C790 611.5 800 606.67 810 602C820 597.33 830 592.67 840 588C850 583.33 860 578.5 870 574C880 569.5 890.83 564.67 900 561C909.17 557.33 918.32 554.37 925 552C931.68 549.63 937.58 547.67 940.1 546.8"/>
+                  <radialGradient id="hero-logistics-light">
+                    <stop stop-color="#bceeff" stop-opacity=".65"/>
+                    <stop offset=".28" stop-color="#7bdcff" stop-opacity=".18"/>
+                    <stop offset="1" stop-color="#55c9ff" stop-opacity="0"/>
+                  </radialGradient>
+                </defs>
+                <!-- Traced from visible photograph routes; one 16s choreography. -->
+                <g class="hero-logistics-pulses">
+                  <g class="hero-logistics-connection" data-logistics-route="northCentral" style="--route: url(#hero-logistics-path-northCentral); --phase: 0s">
+                    <use class="hero-logistics-route-glow" href="#hero-logistics-path-northCentral"/>
+                    <use class="hero-logistics-pulse" href="#hero-logistics-path-northCentral"/>
+                    <g class="hero-logistics-traveler">
+                      <circle class="hero-logistics-particle-halo" r="5"/>
+                      <circle class="hero-logistics-particle-core" r="1.8"/>
+                    </g>
+                  </g>
+                  <g class="hero-logistics-connection" data-logistics-route="andesSoutheast" style="--route: url(#hero-logistics-path-andesSoutheast); --phase: -14s">
+                    <use class="hero-logistics-route-glow" href="#hero-logistics-path-andesSoutheast"/>
+                    <use class="hero-logistics-pulse" href="#hero-logistics-path-andesSoutheast"/>
+                    <g class="hero-logistics-traveler">
+                      <circle class="hero-logistics-particle-halo" r="5"/>
+                      <circle class="hero-logistics-particle-core" r="1.8"/>
+                    </g>
+                  </g>
+                  <g class="hero-logistics-connection" data-logistics-route="centralSoutheast" style="--route: url(#hero-logistics-path-centralSoutheast); --phase: -10s">
+                    <use class="hero-logistics-route-glow" href="#hero-logistics-path-centralSoutheast"/>
+                    <use class="hero-logistics-pulse" href="#hero-logistics-path-centralSoutheast"/>
+                    <g class="hero-logistics-traveler">
+                      <circle class="hero-logistics-particle-halo" r="5"/>
+                      <circle class="hero-logistics-particle-core" r="1.8"/>
+                    </g>
+                  </g>
+                  <g class="hero-logistics-connection" data-logistics-route="southeastSouth" style="--route: url(#hero-logistics-path-southeastSouth); --phase: -6s">
+                    <use class="hero-logistics-route-glow" href="#hero-logistics-path-southeastSouth"/>
+                    <use class="hero-logistics-pulse" href="#hero-logistics-path-southeastSouth"/>
+                    <g class="hero-logistics-traveler">
+                      <circle class="hero-logistics-particle-halo" r="5"/>
+                      <circle class="hero-logistics-particle-core" r="1.8"/>
+                    </g>
+                  </g>
+                  <g class="hero-logistics-connection" data-logistics-route="westSoutheast" style="--route: url(#hero-logistics-path-westSoutheast); --phase: -12s">
+                    <use class="hero-logistics-route-glow" href="#hero-logistics-path-westSoutheast"/>
+                    <use class="hero-logistics-pulse" href="#hero-logistics-path-westSoutheast"/>
+                    <g class="hero-logistics-traveler">
+                      <circle class="hero-logistics-particle-halo" r="5"/>
+                      <circle class="hero-logistics-particle-core" r="1.8"/>
+                    </g>
+                  </g>
+                  <g class="hero-logistics-connection" data-logistics-route="atlanticCentral" style="--route: url(#hero-logistics-path-atlanticCentral); --phase: -8s">
+                    <use class="hero-logistics-route-glow" href="#hero-logistics-path-atlanticCentral"/>
+                    <use class="hero-logistics-pulse" href="#hero-logistics-path-atlanticCentral"/>
+                    <g class="hero-logistics-traveler">
+                      <circle class="hero-logistics-particle-halo" r="5"/>
+                      <circle class="hero-logistics-particle-core" r="1.8"/>
+                    </g>
+                  </g>
+                  <g class="hero-logistics-connection" data-logistics-route="andesCentral" style="--route: url(#hero-logistics-path-andesCentral); --phase: -4s">
+                    <use class="hero-logistics-route-glow" href="#hero-logistics-path-andesCentral"/>
+                    <use class="hero-logistics-pulse" href="#hero-logistics-path-andesCentral"/>
+                    <g class="hero-logistics-traveler">
+                      <circle class="hero-logistics-particle-halo" r="5"/>
+                      <circle class="hero-logistics-particle-core" r="1.8"/>
+                    </g>
+                  </g>
+                  <g class="hero-logistics-connection" data-logistics-route="pacificWest" style="--route: url(#hero-logistics-path-pacificWest); --phase: -2s">
+                    <use class="hero-logistics-route-glow" href="#hero-logistics-path-pacificWest"/>
+                    <use class="hero-logistics-pulse" href="#hero-logistics-path-pacificWest"/>
+                    <g class="hero-logistics-traveler">
+                      <circle class="hero-logistics-particle-halo" r="5"/>
+                      <circle class="hero-logistics-particle-core" r="1.8"/>
+                    </g>
+                  </g>
+                </g>
+                <g class="hero-logistics-hubs">
+                  <g class="hero-logistics-hub" data-logistics-hub="andes" transform="translate(920.6 329.8)">
+                    <g class="hero-logistics-activation" style="--phase: -14s">
+                      <circle class="hero-logistics-hub-bloom" r="8.399999999999999"/>
+                      <circle class="hero-logistics-hub-core" r="2"/>
+                      <circle class="hero-logistics-hub-ring" r="12"/>
+                      <circle class="hero-logistics-hub-ring hero-logistics-hub-ring--echo" r="12"/>
+                    </g>
+                    <g class="hero-logistics-activation" style="--phase: -4s">
+                      <circle class="hero-logistics-hub-bloom" r="8.399999999999999"/>
+                      <circle class="hero-logistics-hub-core" r="2"/>
+                      <circle class="hero-logistics-hub-ring" r="12"/>
+                      <circle class="hero-logistics-hub-ring hero-logistics-hub-ring--echo" r="12"/>
+                    </g>
+                  </g>
+                  <g class="hero-logistics-hub" data-logistics-hub="central" transform="translate(1137.6 349.9)">
+                    <g class="hero-logistics-activation" style="--phase: -15s">
+                      <circle class="hero-logistics-hub-bloom" r="10.5"/>
+                      <circle class="hero-logistics-hub-core" r="2"/>
+                      <circle class="hero-logistics-hub-ring" r="15"/>
+                      <circle class="hero-logistics-hub-ring hero-logistics-hub-ring--echo" r="15"/>
+                    </g>
+                    <g class="hero-logistics-activation" style="--phase: -11s">
+                      <circle class="hero-logistics-hub-bloom" r="10.5"/>
+                      <circle class="hero-logistics-hub-core" r="2"/>
+                      <circle class="hero-logistics-hub-ring" r="15"/>
+                      <circle class="hero-logistics-hub-ring hero-logistics-hub-ring--echo" r="15"/>
+                    </g>
+                    <g class="hero-logistics-activation" style="--phase: -10s">
+                      <circle class="hero-logistics-hub-bloom" r="10.5"/>
+                      <circle class="hero-logistics-hub-core" r="2"/>
+                      <circle class="hero-logistics-hub-ring" r="15"/>
+                      <circle class="hero-logistics-hub-ring hero-logistics-hub-ring--echo" r="15"/>
+                    </g>
+                    <g class="hero-logistics-activation" style="--phase: -3s">
+                      <circle class="hero-logistics-hub-bloom" r="10.5"/>
+                      <circle class="hero-logistics-hub-core" r="2"/>
+                      <circle class="hero-logistics-hub-ring" r="15"/>
+                      <circle class="hero-logistics-hub-ring hero-logistics-hub-ring--echo" r="15"/>
+                    </g>
+                  </g>
+                  <g class="hero-logistics-hub" data-logistics-hub="southeast" transform="translate(1176.3 456.7)">
+                    <g class="hero-logistics-activation" style="--phase: -9s">
+                      <circle class="hero-logistics-hub-bloom" r="16.799999999999997"/>
+                      <circle class="hero-logistics-hub-core" r="2.8"/>
+                      <circle class="hero-logistics-hub-ring" r="24"/>
+                      <circle class="hero-logistics-hub-ring hero-logistics-hub-ring--echo" r="24"/>
+                    </g>
+                    <g class="hero-logistics-activation" style="--phase: -7s">
+                      <circle class="hero-logistics-hub-bloom" r="16.799999999999997"/>
+                      <circle class="hero-logistics-hub-core" r="2.8"/>
+                      <circle class="hero-logistics-hub-ring" r="24"/>
+                      <circle class="hero-logistics-hub-ring hero-logistics-hub-ring--echo" r="24"/>
+                    </g>
+                    <g class="hero-logistics-activation" style="--phase: -6s">
+                      <circle class="hero-logistics-hub-bloom" r="16.799999999999997"/>
+                      <circle class="hero-logistics-hub-core" r="2.8"/>
+                      <circle class="hero-logistics-hub-ring" r="24"/>
+                      <circle class="hero-logistics-hub-ring hero-logistics-hub-ring--echo" r="24"/>
+                    </g>
+                    <g class="hero-logistics-activation" style="--phase: -5s">
+                      <circle class="hero-logistics-hub-bloom" r="16.799999999999997"/>
+                      <circle class="hero-logistics-hub-core" r="2.8"/>
+                      <circle class="hero-logistics-hub-ring" r="24"/>
+                      <circle class="hero-logistics-hub-ring hero-logistics-hub-ring--echo" r="24"/>
+                    </g>
+                  </g>
+                  <g class="hero-logistics-hub" data-logistics-hub="north" transform="translate(921.5 189)">
+                    <g class="hero-logistics-activation" style="--phase: 0s">
+                      <circle class="hero-logistics-hub-bloom" r="8.399999999999999"/>
+                      <circle class="hero-logistics-hub-core" r="2"/>
+                      <circle class="hero-logistics-hub-ring" r="12"/>
+                      <circle class="hero-logistics-hub-ring hero-logistics-hub-ring--echo" r="12"/>
+                    </g>
+                  </g>
+                  <g class="hero-logistics-hub" data-logistics-hub="south" transform="translate(1062 580.5)">
+                    <g class="hero-logistics-activation" style="--phase: -1s">
+                      <circle class="hero-logistics-hub-bloom" r="9.799999999999999"/>
+                      <circle class="hero-logistics-hub-core" r="2"/>
+                      <circle class="hero-logistics-hub-ring" r="14"/>
+                      <circle class="hero-logistics-hub-ring hero-logistics-hub-ring--echo" r="14"/>
+                    </g>
+                  </g>
+                  <g class="hero-logistics-hub" data-logistics-hub="west" transform="translate(940.1 546.8)">
+                    <g class="hero-logistics-activation" style="--phase: -13s">
+                      <circle class="hero-logistics-hub-bloom" r="9.1"/>
+                      <circle class="hero-logistics-hub-core" r="2"/>
+                      <circle class="hero-logistics-hub-ring" r="13"/>
+                      <circle class="hero-logistics-hub-ring hero-logistics-hub-ring--echo" r="13"/>
+                    </g>
+                    <g class="hero-logistics-activation" style="--phase: -12s">
+                      <circle class="hero-logistics-hub-bloom" r="9.1"/>
+                      <circle class="hero-logistics-hub-core" r="2"/>
+                      <circle class="hero-logistics-hub-ring" r="13"/>
+                      <circle class="hero-logistics-hub-ring hero-logistics-hub-ring--echo" r="13"/>
+                    </g>
+                  </g>
+                  <g class="hero-logistics-hub" data-logistics-hub="atlantic" transform="translate(1180.2 174.4)">
+                    <g class="hero-logistics-activation" style="--phase: -8s">
+                      <circle class="hero-logistics-hub-bloom" r="6.3"/>
+                      <circle class="hero-logistics-hub-core" r="2"/>
+                      <circle class="hero-logistics-hub-ring" r="9"/>
+                      <circle class="hero-logistics-hub-ring hero-logistics-hub-ring--echo" r="9"/>
+                    </g>
+                  </g>
+                  <g class="hero-logistics-hub" data-logistics-hub="pacific" transform="translate(661.2 659.1)">
+                    <g class="hero-logistics-activation" style="--phase: -2s">
+                      <circle class="hero-logistics-hub-bloom" r="3.5"/>
+                      <circle class="hero-logistics-hub-core" r="2"/>
+                      <circle class="hero-logistics-hub-ring" r="5"/>
+                      <circle class="hero-logistics-hub-ring hero-logistics-hub-ring--echo" r="5"/>
+                    </g>
+                  </g>
+                </g>
+                <g fill="url(#hero-logistics-light)">
+                  <g class="hero-logistics-headlights">
+                    <ellipse cx="1217" cy="785" rx="18" ry="11"/>
+                    <ellipse cx="1277" cy="787" rx="18" ry="11"/>
+                    <ellipse cx="1493" cy="732" rx="12" ry="8"/>
+                    <ellipse cx="1529" cy="733" rx="12" ry="8"/>
+                  </g>
+                  <g class="hero-logistics-reflections">
+                    <ellipse cx="1230" cy="850" rx="38" ry="9" transform="rotate(-24 1230 850)"/>
+                    <ellipse cx="1506" cy="765" rx="25" ry="6" transform="rotate(-24 1506 765)"/>
+                  </g>
+                </g>
+              </svg>
             </div>
           </div>
           <div class="hero-slide hero-slide--image" data-hero-slide>
@@ -118,8 +329,8 @@
                         <stop offset=".54" stop-color="#c084fc" stop-opacity=".1"/>
                         <stop offset="1" stop-color="#7c3aed" stop-opacity="0"/>
                       </radialGradient>
-                      <radialGradient id="routex-hero-depth">
-                        <stop offset="0" stop-color="#0c091c" stop-opacity=".9"/>
+                      <radialGradient id="routex-hero-depth" cx="46%" cy="44%" r="58%">
+                        <stop offset="0" stop-color="#35204f" stop-opacity=".64"/>
                         <stop offset=".62" stop-color="#170b30" stop-opacity=".58"/>
                         <stop offset="1" stop-color="#653292" stop-opacity="0"/>
                       </radialGradient>
@@ -165,11 +376,11 @@
         </div>
         <div class="container hero-inner">
           <div class="hero-copy reveal">
-            <div class="hero-copy-panel hero-copy-panel--default is-active" data-hero-copy-panel="default">
+            <div class="hero-copy-panel hero-copy-panel--default is-dimmed" data-hero-copy-panel="default" aria-hidden="true" inert>
             <span class="eyebrow eyebrow-light">Ecossistema Enterprise SaaS</span>
             <h1>A central operacional do seu ecossistema empresarial.</h1>
             <p class="hero-lead">
-              ROUTflex HUB integra planejamento territorial, execucao operacional, mobilidade em campo e gestao comercial em uma unica infraestrutura SaaS enterprise &mdash; multiempresa, multimodulo, controle total.
+              <span class="rfx-wordmark"><span class="brand-rout">ROUT</span><span class="brand-flex">flex</span></span> HUB integra planejamento territorial, execucao operacional, mobilidade em campo e gestao comercial em uma unica infraestrutura SaaS enterprise &mdash; multiempresa, multimodulo, controle total.
             </p>
             <div class="hero-actions">
               <a class="button button-primary" href="#contato">Solicitar acesso enterprise</a>
@@ -197,9 +408,17 @@
               </div>
             </div>
             </div>
-            <div class="hero-copy-panel hero-copy-panel--routex" data-hero-copy-panel="routex" aria-hidden="true">
+            <div class="hero-copy-panel hero-copy-panel--opening is-active" data-hero-copy-panel="opening">
+              <h1><span class="rfx-wordmark"><span class="brand-rout">ROUT</span><span class="brand-flex">flex</span></span>. Roteirização inteligente no centro do seu ecossistema operacional.</h1>
+              <p class="hero-lead">Planeje territórios, rotas de entrega e operações de campo conectando planejamento, logística e execução em uma única plataforma.</p>
+              <div class="hero-actions">
+                <a class="button button-primary" href="#contato">Solicitar acesso enterprise</a>
+                <a class="button button-ghost" href="#ecossistema">Explorar o ecossistema</a>
+              </div>
+            </div>
+            <div class="hero-copy-panel hero-copy-panel--routex" data-hero-copy-panel="routex" aria-hidden="true" inert>
               <span class="eyebrow eyebrow-light">Intelig&ecirc;ncia operacional ROUTflex</span>
-              <h1>A intelig&ecirc;ncia viva do ecossistema ROUTflex.</h1>
+              <h1>A intelig&ecirc;ncia viva do ecossistema <span class="rfx-wordmark"><span class="brand-rout">ROUT</span><span class="brand-flex">flex</span></span>.</h1>
               <p class="hero-lead">
                 O ROUTEX automatiza rotinas, conecta m&oacute;dulos e transforma dados operacionais em pr&oacute;ximas a&ccedil;&otilde;es.
               </p>
@@ -208,29 +427,44 @@
               </div>
             </div>
           </div>
-          <div class="hero-login reveal">
-            <div class="hero-login-card">
-              <p class="hero-login-label">ROUTflex Workspace</p>
-              <div class="hero-oauth-row">
-                <button type="button" class="hero-oauth-btn">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-                  Google
-                </button>
-                <button type="button" class="hero-oauth-btn">
-                  <svg width="15" height="15" viewBox="0 0 23 23" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect x="1" y="1" width="10" height="10" fill="#F25022"/><rect x="12" y="1" width="10" height="10" fill="#7FBA00"/><rect x="1" y="12" width="10" height="10" fill="#00A4EF"/><rect x="12" y="12" width="10" height="10" fill="#FFB900"/></svg>
-                  Microsoft
-                </button>
+          <div class="hero-login">
+            <div class="hero-login-card inline-auth" id="acesso" aria-label="Acesso corporativo">
+              <p class="hero-login-label" id="inlineAccessTitle">Sua operação, conectada.</p>
+              <div class="inline-access-modes" role="group" aria-label="Modo de acesso">
+                <button id="inlineModeAdmin" type="button" aria-pressed="true">Administrativo</button>
+                <button id="inlineModeField" type="button" aria-pressed="false">Operação em campo</button>
               </div>
-              <div class="hero-login-divider"><span>ou e-mail corporativo</span></div>
-              <form class="hero-login-form" novalidate>
-                <input id="h-email" name="email" type="email" placeholder="E-mail corporativo" autocomplete="email">
-                <input id="h-pass" name="password" type="password" placeholder="Senha" autocomplete="current-password">
-                <button type="submit" class="button button-primary hero-login-submit">Entrar</button>
+              <p class="inline-auth-intro" id="inlineAccessDescription">Gestão, planejamento e equipes em um só lugar.</p>
+              <div class="inline-auth-stage">
+              <form id="inlineLoginForm" hidden method="post" autocomplete="on">
+                <label for="inlineEmail">E-mail corporativo</label>
+                <input id="inlineEmail" name="email" type="email" autocomplete="username" required maxlength="254" placeholder="voce@empresa.com.br">
+                <label for="inlinePassword">Senha</label>
+                <div class="inline-password">
+                  <input id="inlinePassword" name="password" type="password" autocomplete="current-password" required aria-describedby="inlineLoginError">
+                  <button id="inlineShowPassword" class="inline-password-toggle" type="button" aria-label="Mostrar senha" title="Mostrar senha" aria-controls="inlinePassword" aria-pressed="false">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/>
+                      <circle cx="12" cy="12" r="3"/>
+                      <path class="inline-eye-slash" d="m4 4 16 16"/>
+                    </svg>
+                  </button>
+                </div>
+                <button id="inlineLoginSubmit" class="button button-primary hero-login-submit" type="submit">Entrar</button>
               </form>
-              <p class="hero-login-mfa">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M12 2L20 6L20 12C20 16.4 16.4 20.4 12 22C7.6 20.4 4 16.4 4 12L4 6Z"/><polyline points="9,12 11,14 15,10"/></svg>
-                2FA obrigatorio &middot; Google Authenticator
-              </p>
+              <div id="inlineSession" hidden>
+                <p id="inlineIdentity"></p>
+                <div id="inlineOrganizations" aria-label="Organizações autorizadas"></div>
+                <button id="inlineContinue" class="button button-primary hero-login-submit" type="button">Continuar</button>
+                <button id="inlineLogout" class="inline-quiet" type="button">Sair da conta</button>
+              </div>
+              <button id="inlineRetry" class="button button-primary" type="button" hidden>Tentar novamente</button>
+              </div>
+              <div class="inline-auth-feedback">
+              <p id="inlineLoginError" class="inline-auth-error" role="alert" tabindex="-1" hidden></p>
+              <p id="inlineLoginStatus" class="inline-auth-status" role="status" aria-live="polite">Verificando sessão…</p>
+              </div>
+              <noscript>Ative o JavaScript para entrar com segurança.</noscript>
             </div>
           </div>
         </div>
@@ -241,14 +475,18 @@
           <button class="hero-carousel-arrow hero-carousel-arrow--next" type="button" aria-label="Mostrar proximo visual" data-hero-next>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
           </button>
-          <div class="hero-carousel-indicators" aria-label="Selecionar visual do hero">
-            <button class="hero-carousel-indicator is-active" type="button" aria-label="Visual 1 de 5" aria-current="true" data-hero-indicator="0"></button>
-            <button class="hero-carousel-indicator" type="button" aria-label="Visual 2 de 5" data-hero-indicator="1"></button>
-            <button class="hero-carousel-indicator" type="button" aria-label="Visual 3 de 5" data-hero-indicator="2"></button>
-            <button class="hero-carousel-indicator" type="button" aria-label="Visual 4 de 5" data-hero-indicator="3"></button>
-            <button class="hero-carousel-indicator" type="button" aria-label="Visual 5 de 5" data-hero-indicator="4"></button>
+          <div class="hero-carousel-indicators" aria-label="Selecionar etapa do carrossel">
+            <button class="hero-carousel-indicator is-active" type="button" aria-label="Etapa 1 de 3" aria-current="true" data-hero-indicator="0"></button>
+            <button class="hero-carousel-indicator" type="button" aria-label="Etapa 2 de 3" data-hero-indicator="1"></button>
+            <button class="hero-carousel-indicator" type="button" aria-label="Etapa 3 de 3" data-hero-indicator="2"></button>
           </div>
         </div>
+        <a class="hero-scroll-arrow" href="#solucoes" aria-label="Explorar soluções ROUTflex" data-hero-scroll>
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6"/></svg>
+        </a>
+        <svg class="hero-bottom-curve" viewBox="0 0 1200 64" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+          <path d="M0 0H300C450 0 450 64 600 64C750 64 750 0 900 0H1200V64H0Z"/>
+        </svg>
       </section>
 
       <!-- CINEMATIC — Planning → Sales → Palm → Ops, controlled by scroll. -->
@@ -351,7 +589,7 @@
             <div class="hub-line"></div>
             <div class="hub-center">
               <img src="assets/logo.png" alt="" width="28" height="28">
-              <span>ROUTflex HUB</span>
+              <span><span class="rfx-wordmark"><span class="brand-rout">ROUT</span><span class="brand-flex">flex</span></span> HUB</span>
             </div>
             <div class="hub-line"></div>
           </div>
@@ -483,36 +721,12 @@
             <div class="login-card-header">
               <img src="assets/logo.png" alt="ROUTflex" width="36" height="36" loading="eager">
               <div class="login-card-brand">
-                <strong>ROUTflex Workspace</strong>
+                <strong><span class="rfx-wordmark"><span class="brand-rout">ROUT</span><span class="brand-flex">flex</span></span> Workspace</strong>
                 <span>workspace.routflex.com.br</span>
               </div>
             </div>
-            <div class="login-oauth">
-              <button type="button" class="oauth-btn">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-                Continuar com Google
-              </button>
-              <button type="button" class="oauth-btn">
-                <svg width="18" height="18" viewBox="0 0 23 23" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect x="1" y="1" width="10" height="10" fill="#F25022"/><rect x="12" y="1" width="10" height="10" fill="#7FBA00"/><rect x="1" y="12" width="10" height="10" fill="#00A4EF"/><rect x="12" y="12" width="10" height="10" fill="#FFB900"/></svg>
-                Continuar com Microsoft
-              </button>
-            </div>
-            <div class="login-divider"><span>ou com e-mail corporativo</span></div>
-            <form class="login-form" novalidate>
-              <div class="form-row">
-                <label for="ws-email">E-mail</label>
-                <input id="ws-email" name="email" type="email" placeholder="voce@empresa.com" autocomplete="email">
-              </div>
-              <div class="form-row">
-                <label for="ws-pass">Senha</label>
-                <input id="ws-pass" name="password" type="password" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;" autocomplete="current-password">
-              </div>
-              <button type="submit" class="button button-primary login-submit">Entrar no Workspace</button>
-            </form>
-            <p class="login-mfa-note">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M12 2L20 6L20 12C20 16.4 16.4 20.4 12 22C7.6 20.4 4 16.4 4 12L4 6Z"/><polyline points="9,12 11,14 15,10"/></svg>
-              Autenticacao em dois fatores (2FA) obrigatoria para todos os acessos ao workspace.
-            </p>
+            <p>Entre com sua conta ROUTflex na área de acesso.</p>
+            <a class="button button-primary login-submit" href="#acesso">Acessar ROUTflex</a>
           </div>        </div>
       </section>
 
@@ -678,17 +892,18 @@
               <img src="assets/logo.png" alt="ROUTflex" width="32" height="32">
               <strong><span class="brand-rout">ROUT</span><span class="brand-flex">flex</span></strong>
             </a>
-            <p class="footer-desc">Ecossistema SaaS Enterprise para planejamento territorial, operacao de campo, gestao comercial e governanca multiempresa.</p>
+            <p class="footer-desc">Planejamento territorial, operação de campo e gestão comercial conectados.</p>
             <div class="footer-legal">
-              <span>ROUTflex Tecnologia para Operacoes Ltda.</span>
-              <span>CNPJ: 00.000.000/0001-00</span>
-              <span>Av. das Nacoes Unidas, 1000 - Cuiaba/MT</span>
+              <span>Cuiabá — MT</span>
+            </div>
+            <div class="footer-contact-list footer-brand-contact">
+              <a href="mailto:contato@routflex.com.br">contato@routflex.com.br</a>
             </div>
           </div>
 
           <div class="footer-col">
             <strong class="footer-col-title">Ecossistema</strong>
-            <nav class="footer-nav" aria-label="Modulos do ecossistema">
+            <nav class="footer-nav" aria-label="Módulos do ecossistema">
               <a href="#ecossistema">Planning</a>
               <a href="#ecossistema">OPS</a>
               <a href="#ecossistema">Palm</a>
@@ -701,39 +916,95 @@
             <strong class="footer-col-title">Plataforma</strong>
             <nav class="footer-nav" aria-label="Links da plataforma">
               <a href="#resultados">Resultados</a>
-              <a href="#seguranca">Seguranca</a>
+              <a href="#seguranca">Segurança</a>
               <a href="#contato">Agendar Demo</a>
             </nav>
           </div>
 
           <div class="footer-col">
-            <strong class="footer-col-title">Contato</strong>
-            <div class="footer-contact-list">
-              <a href="mailto:contato@routflex.com.br">contato@routflex.com.br</a>
-              <a href="tel:08000000000" class="footer-phone">0800 000 0000</a>
-              <span class="footer-phone-label">Atendimento Corporativo</span>
-            </div>
+            <strong class="footer-col-title">Institucional</strong>
+            <nav class="footer-nav" aria-label="Links institucionais">
+              <button class="footer-legal-trigger" type="button" data-footer-legal="about" aria-haspopup="dialog" aria-controls="footerLegalDialog">Sobre nós</button>
+              <a href="#contato">Contato</a>
+            </nav>
+            <strong class="footer-col-title footer-legal-title">Legal</strong>
+            <nav class="footer-nav" aria-label="Privacidade e termos">
+              <button class="footer-legal-trigger" type="button" data-footer-legal="privacy" aria-haspopup="dialog" aria-controls="footerLegalDialog">Política de Privacidade</button>
+              <button class="footer-legal-trigger" type="button" data-footer-legal="terms" aria-haspopup="dialog" aria-controls="footerLegalDialog">Termos de Uso</button>
+            </nav>
             <div class="social-links" aria-label="Redes sociais ROUTflex">
-              <a class="social-link" href="tel:08000000000" aria-label="Telefone ROUTflex">
-                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M19.05 4.94A9.86 9.86 0 0 0 12.02 2C6.58 2 2.16 6.42 2.16 11.86c0 1.74.46 3.44 1.33 4.94L2 22l5.35-1.4a9.82 9.82 0 0 0 4.67 1.19h.01c5.44 0 9.86-4.42 9.86-9.86 0-2.63-1.02-5.1-2.84-6.99Zm-7.03 15.18h-.01a8.14 8.14 0 0 1-4.15-1.13l-.3-.18-3.18.83.85-3.1-.2-.32a8.16 8.16 0 0 1-1.25-4.35c0-4.48 3.65-8.13 8.15-8.13 2.18 0 4.23.85 5.76 2.39a8.08 8.08 0 0 1 2.37 5.75c0 4.49-3.65 8.14-8.04 8.14Zm4.47-6.08c-.24-.12-1.43-.7-1.65-.78-.22-.08-.38-.12-.54.12-.16.24-.62.78-.76.94-.14.16-.28.18-.52.06-.24-.12-1-.37-1.9-1.17-.7-.63-1.17-1.4-1.31-1.64-.14-.24-.01-.37.1-.49.11-.11.24-.28.36-.42.12-.14.16-.24.24-.4.08-.16.04-.3-.02-.42-.06-.12-.54-1.3-.74-1.78-.2-.48-.4-.42-.54-.43h-.46c-.16 0-.42.06-.64.3-.22.24-.84.82-.84 2s.86 2.32.98 2.48c.12.16 1.68 2.56 4.07 3.59.57.24 1.01.38 1.35.48.57.18 1.09.16 1.5.1.46-.07 1.43-.58 1.63-1.14.2-.56.2-1.04.14-1.14-.06-.1-.22-.16-.46-.28Z"/></svg>
-              </a>
               <a class="social-link" href="https://www.instagram.com/routflex/" target="_blank" rel="noreferrer noopener" aria-label="Instagram ROUTflex">
                 <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5Zm0 2.2A2.8 2.8 0 0 0 4.2 7v10A2.8 2.8 0 0 0 7 19.8h10a2.8 2.8 0 0 0 2.8-2.8V7A2.8 2.8 0 0 0 17 4.2H7Zm10.15 1.65a1.2 1.2 0 1 1 0 2.4 1.2 1.2 0 0 1 0-2.4ZM12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10Zm0 2.2a2.8 2.8 0 1 0 0 5.6 2.8 2.8 0 0 0 0-5.6Z"/></svg>
               </a>
               <a class="social-link" href="https://www.linkedin.com/in/phillips-mijares-a50454176/" target="_blank" rel="noreferrer noopener" aria-label="LinkedIn ROUTflex">
                 <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6.94 8.5H3.56V20h3.38V8.5ZM5.25 3A1.97 1.97 0 1 0 5.3 6.94 1.97 1.97 0 0 0 5.25 3ZM20.44 12.72c0-3.42-1.83-5.01-4.28-5.01-1.97 0-2.85 1.08-3.34 1.84V8.5H9.44V20h3.38v-6.4c0-1.69.32-3.32 2.42-3.32 2.08 0 2.11 1.95 2.11 3.43V20h3.39l-.3-7.28Z"/></svg>
               </a>
+              <a class="social-link" data-whatsapp-commercial target="_blank" rel="noopener noreferrer" aria-label="Falar com ROUTflex pelo WhatsApp">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20.52 3.48A11.86 11.86 0 0 0 12.05 0C5.46 0 .1 5.36.1 11.95c0 2.1.55 4.15 1.6 5.96L0 24l6.25-1.64a11.94 11.94 0 0 0 5.8 1.48h.01c6.58 0 11.94-5.36 11.94-11.95a11.87 11.87 0 0 0-3.48-8.41ZM12.06 21.82a9.9 9.9 0 0 1-5.04-1.38l-.36-.21-3.71.97.99-3.62-.24-.37a9.86 9.86 0 0 1-1.51-5.26c0-5.48 4.46-9.94 9.94-9.94a9.87 9.87 0 0 1 7.03 2.91 9.87 9.87 0 0 1 2.9 7.03c0 5.48-4.46 9.94-9.94 9.94Zm5.45-7.44c-.3-.15-1.77-.87-2.05-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.95 1.17-.17.2-.35.22-.65.07-.3-.15-1.26-.46-2.4-1.49-.89-.79-1.49-1.77-1.66-2.07-.18-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.18.2-.3.3-.5.1-.2.05-.37-.03-.52-.07-.15-.67-1.62-.92-2.22-.24-.58-.48-.5-.67-.51h-.57c-.2 0-.52.07-.8.37-.27.3-1.04 1.02-1.04 2.49 0 1.47 1.07 2.89 1.22 3.09.15.2 2.1 3.2 5.09 4.49.71.31 1.27.49 1.7.63.71.23 1.36.2 1.87.12.57-.09 1.77-.72 2.02-1.42.25-.7.25-1.3.18-1.42-.08-.13-.28-.2-.58-.35Z"/></svg>
+              </a>
             </div>
           </div>
 
         </div>
         <div class="footer-bottom">
-          <span>&copy; 2026 ROUTflex Tecnologia para Operacoes Ltda. Todos os direitos reservados.</span>
+          <span>&copy; 2026 ROUTflex. Todos os direitos reservados.</span>
         </div>
       </div>
     </footer>
 
   </div>
+
+  <dialog class="footer-dialog" id="footerLegalDialog" aria-labelledby="footerLegalTitle">
+    <div class="footer-dialog-header">
+      <h2 id="footerLegalTitle" tabindex="-1">Política de Privacidade</h2>
+      <button class="footer-dialog-close" type="button" data-footer-legal-close aria-label="Fechar janela">
+        <span class="footer-dialog-close-label">Fechar</span>
+        <svg class="footer-dialog-close-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" focusable="false"><path d="m6 6 12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+    <div class="footer-dialog-body">
+      <div data-footer-legal-content="about" hidden>
+        <div class="about-dialog-layout">
+          <figure class="about-dialog-photo">
+            <div class="about-dialog-photo-frame">
+              <img src="assets/about/cuiaba.jpg" width="1280" height="853" loading="lazy" decoding="async" alt="Vista aérea real de Cuiabá ao fim da tarde, com a Arena Pantanal, o Ginásio Aecim Tocantins e os edifícios da cidade.">
+            </div>
+            <figcaption>
+              Foto: <a href="https://commons.wikimedia.org/wiki/File:Vista-Aerea-Cuiaba.jpg" target="_blank" rel="noreferrer noopener">Junior Silgueiro / Wikimedia Commons</a>, 2015 · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer noopener">CC BY 4.0</a>.
+              <span>Redimensionada; enquadramento e sobreposição de cor na interface.</span>
+            </figcaption>
+          </figure>
+          <div class="about-dialog-copy">
+            <span class="eyebrow eyebrow-light">Nossa origem</span>
+            <h2 id="aboutDialogTitle" data-footer-dialog-title tabindex="-1">Sobre a <span class="brand-rout">ROUT</span><span class="brand-flex">flex</span></h2>
+            <p class="about-dialog-location">Cuiabá <span aria-hidden="true">•</span> Mato Grosso <span aria-hidden="true">•</span> 2026</p>
+            <div class="about-dialog-story">
+              <p class="about-dialog-lead">A ROUTflex começou a ser desenvolvida em Cuiabá, Mato Grosso, em 2026, a partir de uma necessidade observada na prática.</p>
+              <p>Seu fundador, <strong>Phillips David Mijares Arenas</strong>, profissional venezuelano com mais de sete anos de experiência em logística, roteirização e operações de campo, percebeu ao longo de sua trajetória que muitas atividades ainda dependiam de processos manuais, ferramentas pouco flexíveis e sistemas que nem sempre acompanhavam a complexidade e o tamanho das operações.</p>
+              <p class="about-dialog-principle">Com experiência prática em rotas, entregas e planejamento territorial, somada a conhecimentos em desenvolvimento de software e design, surgiu a proposta de construir <strong>uma plataforma capaz de se adaptar à operação — e não obrigar a operação a se adaptar ao sistema.</strong></p>
+              <p class="about-dialog-beginning">Assim nasceu a ROUTflex.</p>
+              <p>O projeto foi pensado para atender diferentes contextos operacionais, desde equipes comerciais e profissionais em campo até operações de distribuição, logística, transporte e agronegócio.</p>
+              <p>Mais do que simplesmente traçar rotas, a proposta da ROUTflex é reduzir trabalhos repetitivos, organizar informações operacionais e automatizar processos que ainda são executados manualmente, permitindo que profissionais de logística dediquem mais tempo à análise, à tomada de decisão e à melhoria contínua da operação.</p>
+              <p class="about-dialog-closing">A ROUTflex continua evoluindo a partir dessa mesma ideia: <strong>transformar experiência operacional em tecnologia prática, flexível e aplicável ao dia a dia.</strong></p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div data-footer-legal-content="privacy" hidden>
+        <p>Esta política se refere ao contato feito pela Landing da ROUTflex.</p>
+        <p>O formulário apresenta campos de nome, empresa, telefone, e-mail e mensagem. O envio pelo formulário ainda não está disponível. Para falar conosco, use <a href="mailto:contato@routflex.com.br">contato@routflex.com.br</a>.</p>
+        <p>As informações que você enviar pelo canal de contato poderão ser usadas para responder à sua mensagem, agendar uma demonstração, conversar sobre o produto, preparar uma proposta, dar continuidade ao contato comercial ou prestar o atendimento que você solicitar.</p>
+        <p>O uso dessas informações acompanha a finalidade do seu contato. Você pode solicitar atualização ou exclusão pelo mesmo e-mail.</p>
+        <p>A Landing usa armazenamento temporário na aba para não repetir a introdução durante a sessão. Não há analytics ou cookies de publicidade implementados nesta página.</p>
+      </div>
+      <div data-footer-legal-content="terms" hidden>
+        <p>Esta Landing apresenta a ROUTflex e suas soluções. As informações e funcionalidades apresentadas podem evoluir.</p>
+        <p>Uma demonstração não representa, por si só, contrato ou garantia comercial. As condições específicas de contratação serão combinadas separadamente, quando aplicável.</p>
+        <p>Marcas, interface e materiais apresentados pertencem aos seus respectivos titulares.</p>
+        <p>Não é permitido usar o site para atividades indevidas, tentar comprometer seu funcionamento ou utilizar seus materiais de forma não autorizada.</p>
+      </div>
+    </div>
+  </dialog>
 
   <div class="access-loader" data-access-loader role="dialog" aria-modal="true" aria-labelledby="accessLoaderTitle" aria-hidden="true" hidden>
     <div class="access-loader__network">
@@ -780,6 +1051,7 @@
         <button class="chip" data-query="demonstracao">Agendar demo</button>
         <button class="chip" data-query="funcionalidades">Ver plataforma</button>
         <button class="chip" data-query="contato">Falar com especialista</button>
+        <button class="chip" type="button" data-query="whatsapp">WhatsApp</button>
       </div>
       <form class="chat-input-row" id="chatForm" autocomplete="off">
         <input class="chat-input" id="chatInput" type="text" placeholder="Escreva sua duvida..." aria-label="Sua mensagem" maxlength="200">
@@ -797,6 +1069,11 @@
   <!-- GSAP + ScrollTrigger remain available for the Landing's other reveals. -->
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+  <script src="auth-config.js"></script>
+  <script src="core-client.js"></script>
+  <script src="destination-resolver.js"></script>
+  <script src="auth-transition.js"></script>
+  <script src="inline-auth.js"></script>
   <script src="cinematic.js"></script>
   <script src="script.js"></script>
   <script src="routex-hero.js"></script>

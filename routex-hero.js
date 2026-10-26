@@ -7,6 +7,7 @@
   if (!shape) return;
 
   const light = body.querySelector('.routex-life__body-light');
+  const lightGradient = body.querySelector('#routex-life-body-light-hero');
   const base = body.querySelector('.routex-life__body-base');
   const touch = body.querySelector('.hero-routex-touch');
   const touchGradient = body.querySelector('#routex-hero-touch');
@@ -79,14 +80,25 @@
     const sx = pulse > .05 && badge < 0 ? 84 : source[0];
     const sy = pulse > .05 && badge < 0 ? 55 : source[1];
     let energy = 0;
-    const points = rest.map((p, i) => {
+    // Small fixed substeps keep the same elastic response at 24/30 fps and
+    // after a slow frame. Read neighbours before advancing any displacement.
+    const targets = rest.map(p => {
       const distance = Math.hypot(p.x - sx, p.y - sy);
       const local = active ? Math.exp(-(distance * distance) / 290) : 0;
-      const target = local * (badge >= 0 ? 2.5 : 1.7 + pointer.speed * 1.7 + pulse * 2);
-      // Underdamped springs + small neighbour coupling: impact, overshoot, rest.
-      const neighbours = (displacement[(i + count - 1) % count] + displacement[(i + 1) % count]) / 2;
-      velocity[i] += ((target - displacement[i]) * 72 - velocity[i] * 9 + (neighbours - displacement[i]) * 9) * dt;
-      displacement[i] = Math.max(-3.2, Math.min(4.8, displacement[i] + velocity[i] * dt));
+      return local * (badge >= 0 ? 2.5 : 1.7 + pointer.speed * 1.7 + pulse * 2);
+    });
+    const steps = Math.max(1, Math.ceil(dt * 120));
+    const step = dt / steps;
+    for (let n = 0; n < steps; n++) {
+      for (let i = 0; i < count; i++) {
+        const neighbours = (displacement[(i + count - 1) % count] + displacement[(i + 1) % count]) / 2;
+        velocity[i] += ((targets[i] - displacement[i]) * 72 - velocity[i] * 9 + (neighbours - displacement[i]) * 9) * step;
+      }
+      for (let i = 0; i < count; i++) {
+        displacement[i] = Math.max(-3.2, Math.min(4.8, displacement[i] + velocity[i] * step));
+      }
+    }
+    const points = rest.map((p, i) => {
       const angle = Math.atan2(p.ny, p.nx);
       const idle = reduced.matches ? 0 : .55 * Math.sin(time * .48 + angle * 3) + .33 * Math.sin(time * .31 - angle * 5) + .2 * Math.sin(time * .67);
       const amount = idle + displacement[i];
@@ -97,13 +109,20 @@
     shape.setAttribute('d', d);
     base.setAttribute('d', d);
     light.setAttribute('d', d);
+    // Internal light drifts independently of the membrane, without rotating it.
+    const lightX = 29 + Math.sin(time * .17) * 2.4;
+    const lightY = 27 + Math.sin(time * .23) * 1.8;
+    lightGradient.setAttribute('gradientTransform', `translate(${lightX.toFixed(2)} ${lightY.toFixed(2)}) rotate(48) scale(67 72)`);
     touchGradient.setAttribute('cx', sx.toFixed(2));
     touchGradient.setAttribute('cy', sy.toFixed(2));
     touch.setAttribute('opacity', Math.min(.76, energy * .17).toFixed(3));
     filaments.style.opacity = (.23 + Math.min(.4, energy * .09)).toFixed(3);
     threads.forEach((thread, i) => {
-      const flow = Math.sin(time * .24 + i * 1.6) * 2;
+      const flow = Math.sin(time * (.19 + i * .017) + i * 1.6) * 2;
       thread.setAttribute('transform', `translate(${flow.toFixed(2)} ${(flow * .45).toFixed(2)})`);
+      // Staggered envelopes let each connection emerge and dissolve quietly.
+      const envelope = .5 + .5 * Math.sin(time * (.31 + i * .023) + i * 1.9);
+      thread.setAttribute('opacity', (reduced.matches ? .45 : .04 + .9 * envelope * envelope).toFixed(3));
     });
     const mix = 1 - Math.exp(-dt * 2.6);
     ambient.x += (ambient.targetX - ambient.x) * mix;
@@ -135,8 +154,14 @@
     if (disposed) return;
     const active = slide.classList.contains('is-active');
     const next = active && inView && !document.hidden && !reduced.matches;
-    if (!active) clearPointer();
+    if (!next) clearPointer();
     measure();
+    if (!active || reduced.matches) {
+      displacement.fill(0);
+      velocity.fill(0);
+      pulse = 0;
+      render(0);
+    }
     if (next === running) return;
     running = next;
     slide.classList.toggle('is-routex-running', running);
@@ -144,13 +169,6 @@
     frame = 0;
     last = performance.now();
     if (running) frame = requestAnimationFrame(tick);
-    else if (reduced.matches) {
-      displacement.fill(0);
-      velocity.fill(0);
-      clearPointer();
-      pulse = 0;
-      render(0);
-    }
   }
 
   function move(event) {
@@ -192,7 +210,8 @@
     inView = entries[0].isIntersecting;
     sync();
   }, { threshold: .05 });
-  visibility.observe(hero);
+  // On mobile the login can remain visible after the organism has left view.
+  visibility.observe(body);
   const removal = new MutationObserver(() => { if (!hero.isConnected) dispose(); });
   removal.observe(document.body, { childList: true, subtree: true });
 
@@ -214,7 +233,7 @@
   }, options);
   window.addEventListener('pageshow', () => {
     measure();
-    inView = heroBounds.bottom > 0 && heroBounds.top < innerHeight;
+    inView = bounds.bottom > 0 && bounds.top < innerHeight;
     sync();
   }, options);
   measure();
