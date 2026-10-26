@@ -4,35 +4,30 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="no-referrer">
   <title>ROUTflex Workspace | Central Administrativa</title>
   <link rel="icon" type="image/png" href="assets/logo.png">
+  <link rel="preload" href="https://fonts.gstatic.com/s/dmserifdisplay/v17/-nFnOHM81r4j6k0gjAW3mujVU2B2G_Bx0g.woff2" as="font" type="font/woff2" crossorigin referrerpolicy="no-referrer">
   <link rel="stylesheet" href="workspace.css">
+  <link rel="stylesheet" href="auth-transition.css">
 </head>
-<body>
-  <div class="demo-flag" id="demoFlag" hidden aria-hidden="true">MODO DEMONSTRAÇÃO · dados fictícios</div>
-
-  <section class="ws-auth" id="authView" aria-labelledby="authTitle">
+<body class="workspace-premium">
+  <section id="authTransition" aria-label="Estado da sessão"><p id="authTransitionMessage" role="status" aria-live="polite">Verificando sessão…</p><button id="authTransitionRetry" type="button" hidden>Tentar novamente</button></section>
+  <section class="ws-auth" id="authView" hidden aria-labelledby="authTitle">
     <div class="ws-auth-card">
       <div class="ws-auth-brand">
         <img src="assets/logo.png" alt="ROUTflex" width="40" height="40">
         <span><strong><span>ROUT</span>flex</strong><small>Workspace</small></span>
       </div>
-      <h1 id="authTitle">Acesse sua organização</h1>
+      <h1 id="authTitle">Acesse o ROUTflex</h1>
       <p class="ws-auth-sub">Autenticação corporativa via ROUTflex Platform Core.</p>
 
-      <form id="loginForm" autocomplete="on" novalidate>
-        <label class="ws-field">
-          <span>E-mail corporativo</span>
-          <input id="loginEmail" name="email" type="email" autocomplete="username" required placeholder="voce@empresa.com.br">
-        </label>
-        <label class="ws-field">
-          <span>Senha</span>
-          <input id="loginPassword" name="password" type="password" autocomplete="current-password" required placeholder="••••••••••••">
-        </label>
+      <form id="loginForm">
         <p class="ws-form-error" id="loginError" role="alert" hidden></p>
-        <button type="submit" id="loginSubmit">Entrar no Workspace</button>
+        <button type="submit" id="loginSubmit">Entrar pela Landing</button>
       </form>
       <p class="ws-auth-note">O acesso a módulos, licenças e equipes é resolvido pelo Platform Core. Nenhuma permissão é concedida pelo navegador.</p>
+      <a href="/">Voltar à página inicial</a>
     </div>
 
     <div class="ws-auth-card" id="tenantPicker" hidden>
@@ -44,43 +39,48 @@
   </section>
 
   <div class="workspace-shell" id="workspaceShell" hidden>
-    <aside class="workspace-sidebar" aria-label="Navegação do Workspace">
+    <aside class="workspace-sidebar" id="workspaceSidebar" aria-label="Navegação do Workspace">
+      <div class="workspace-sidebar-heading">
       <a class="workspace-brand" href="#workspace" aria-label="ROUTflex Workspace">
         <img src="assets/logo.png" alt="ROUTflex" width="36" height="36">
-        <span>
+        <span class="workspace-brand-copy">
           <strong><span>ROUT</span>flex</strong>
           <small>Workspace</small>
         </span>
       </a>
+      <button class="workspace-sidebar-toggle" id="sidebarToggle" type="button" aria-controls="workspaceSidebar" aria-expanded="true" aria-label="Recolher menu lateral" title="Recolher menu lateral" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 7-5 5 5 5"/><path d="m20 7-5 5 5 5"/></svg>
+      </button>
+      </div>
 
-      <nav class="workspace-nav">
-        <a class="is-active" href="#workspace" data-section="workspace">
+      <nav class="workspace-nav" aria-label="Seções administrativas">
+        <a class="is-active" href="#workspace" data-section="workspace" aria-label="Workspace" title="Workspace">
           <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
-          Workspace
+          <span class="sidebar-item-label">Workspace</span>
         </a>
-        <a href="#modulos" data-section="modulos">
+        <a href="#modulos" data-section="modulos" aria-label="Módulos" title="Módulos">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 21 7 12 12 3 7 12 2Z"/><path d="M21 12 12 17 3 12"/><path d="M21 17 12 22 3 17"/></svg>
-          Módulos
+          <span class="sidebar-item-label">Módulos</span>
         </a>
-        <a href="#usuarios" data-section="usuarios">
+        <a href="#usuarios" data-section="usuarios" aria-label="Usuários" title="Usuários">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          Usuários
+          <span class="sidebar-item-label">Usuários</span>
         </a>
-        <a href="#licenciamento" data-section="licenciamento">
+        <a href="#licenciamento" data-section="licenciamento" aria-label="Licenciamento" title="Licenciamento">
           <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>
-          Licenciamento
+          <span class="sidebar-item-label">Licenciamento</span>
         </a>
-        <a href="#seguranca" data-section="seguranca">
+        <a href="#seguranca" data-section="seguranca" aria-label="Segurança" title="Segurança">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 20 6v6c0 4.4-3.6 8.4-8 10-4.4-1.6-8-5.6-8-10V6l8-4Z"/><path d="m9 12 2 2 4-5"/></svg>
-          Segurança
+          <span class="sidebar-item-label">Segurança</span>
         </a>
-        <a href="#marketplace" data-section="marketplace">
+        <a href="#marketplace" data-section="marketplace" aria-label="Marketplace" title="Marketplace">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
-          Marketplace
+          <span class="sidebar-item-label">Marketplace</span>
         </a>
-        <a href="#configuracoes" data-section="configuracoes">
+        <a href="#configuracoes" data-section="configuracoes" aria-label="Empresa" title="Empresa">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 8.6 19a1.7 1.7 0 0 0-1.88.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 5 8.6a1.7 1.7 0 0 0-.34-1.88l-.06-.06A2 2 0 1 1 7.43 3.8l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V3a2 2 0 1 1 4 0v.09A1.7 1.7 0 0 0 15.4 5a1.7 1.7 0 0 0 1.88-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9c.4.2.75.42 1 .6.34.25.6.66.6 1.1V11a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 0Z"/></svg>
-          Empresa
+          <span class="sidebar-item-label">Empresa</span>
         </a>
       </nav>
 
@@ -89,9 +89,9 @@
           <span class="session-avatar" id="sessionAvatar" aria-hidden="true">–</span>
           <span class="session-copy"><strong id="sessionUserName">—</strong><small id="sessionUserEmail">—</small></span>
         </div>
-        <button class="session-logout" id="logoutTrigger" type="button">
+        <button class="session-logout" id="logoutTrigger" type="button" aria-label="Encerrar sessão" title="Encerrar sessão">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/><path d="M12 3h7a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-7"/></svg>
-          Encerrar sessão
+          <span class="sidebar-item-label">Encerrar sessão</span>
         </button>
       </div>
     </aside>
@@ -113,8 +113,10 @@
 
       <section class="company-profile-card" aria-label="Resumo institucional da organização">
         <div class="company-profile-main">
-          <span class="company-avatar" id="tenantAvatar">—</span>
-          <div>
+          <span class="company-identity-mark" aria-hidden="true">
+            <span class="company-avatar" id="tenantAvatar">—</span>
+          </span>
+          <div class="company-profile-heading">
             <span class="profile-label">Organização</span>
             <h2 id="tenantName">Carregando…</h2>
             <p id="tenantTagline">Sincronizando com o Platform Core.</p>
@@ -264,8 +266,10 @@
 
   <div class="ws-toast-region" id="wsToastRegion" role="status" aria-live="polite" aria-atomic="true"></div>
 
+  <script src="auth-config.js"></script>
   <script src="core-client.js"></script>
-  <script src="core-fixtures.js"></script>
+  <script src="auth-transition.js"></script>
+  <script src="destination-resolver.js"></script>
   <script src="workspace.js"></script>
 </body>
 </html>

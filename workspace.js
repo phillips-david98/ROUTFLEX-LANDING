@@ -7,7 +7,7 @@
    - Estados (NOT_CONTRACTED, TRIAL, ACTIVE, SUSPENDED, EXPIRED, CANCELLED,
      carregando, erro, vazio, sem permissão, limite atingido, convite pendente,
      tenant suspenso) refletem exclusivamente as respostas da API.
-   - Nenhum dado fixo é usado como resposta final; fixtures só com ?demo=1.
+   - Nenhum dado fixo ou fixture participa da entrada oficial.
    ============================================================================= */
 (function initWorkspace() {
   "use strict";
@@ -38,6 +38,10 @@
   const STORAGE_TENANT = "routflex.core.tenantId";
 
   const state = {
+    generation: 0,
+    loads: Object.create(null),
+    modalScope: null,
+    loginAttempt: null,
     me: null,
     tenantId: null,
     context: null,
@@ -51,6 +55,82 @@
     audit: null,
     blocked: null, // { kind: 'TENANT' | 'MEMBERSHIP', message }
   };
+  const pendingUiTimers = new Set();
+
+  // A tenant may be selected again before an earlier response completes (A → B → A).
+  // Identity, tenant and generation must all still match before using any response.
+  function captureContext(loader) {
+    const scope = {
+      generation: state.generation, tenantId: state.tenantId, me: state.me,
+      userId: state.me?.user?.id, sessionId: state.me?.authenticationSessionId,
+      loader, request: loader ? Symbol(loader) : null,
+    };
+    if (loader) state.loads[loader] = scope.request;
+    return scope;
+  }
+
+  function isCurrentContext(scope) {
+    return scope.generation === state.generation && scope.tenantId === state.tenantId &&
+      scope.me === state.me && scope.userId === state.me?.user?.id &&
+      scope.sessionId === state.me?.authenticationSessionId &&
+      (!scope.loader || state.loads[scope.loader] === scope.request);
+  }
+
+  function validateTenantContext(context, scope) {
+    const membership = scope.me?.tenants?.find((tenant) => tenant.id === scope.tenantId);
+    if (!membership || context?.tenant?.id !== scope.tenantId ||
+        !membership.membershipId || context?.membership?.id !== membership.membershipId) {
+      throw { code: "INVALID_TENANT_CONTEXT", message: "O contexto retornado não corresponde à organização e ao vínculo selecionados." };
+    }
+    return context;
+  }
+
+  function invalidateContext(clearIdentity = false) {
+    state.generation += 1;
+    state.loads = Object.create(null); // Logical cancellation; no claim that an accepted write was cancelled.
+    state.tenantId = null;
+    for (const key of ["context", "tenantRecord", "seats", "entitlements", "memberships", "invitations", "roles", "audit", "blocked"]) state[key] = null;
+    if (clearIdentity) {
+      state.me = null;
+      state.catalog = null;
+      state.loginAttempt = null;
+      if ($("loginSubmit")) {
+        $("loginSubmit").disabled = false;
+        $("loginSubmit").textContent = "Entrar pela Landing";
+      }
+      for (const id of ["sessionAvatar", "sessionUserName", "sessionUserEmail", "tenantList"]) {
+        const node = $(id);
+        if (node) node.textContent = "";
+      }
+      if ($("sessionIdentity")) $("sessionIdentity").hidden = true;
+      for (const id of ["loginEmail", "loginPassword"]) if ($(id)) $(id).value = "";
+    }
+    for (const id of ["stripTenant", "stripStatus", "stripMembership", "tenantName", "tenantTagline", "tenantAvatar", "factSlug", "factStatus", "factMembership", "factRoles", "factUnits", "metricsGrid", "moduleGrid", "teamActions", "teamContent", "invitesBlock", "securityContent", "licenseContent", "marketContent", "settingsContent", "wsBanner", "wsToastRegion", "routexConversation"]) {
+      const node = $(id);
+      if (node) node.textContent = "";
+    }
+    closeModal(false);
+    if ($("logoutModal")) $("logoutModal").hidden = true;
+    if (toastTimer) window.clearTimeout(toastTimer);
+    toastTimer = null;
+    pendingUiTimers.forEach((timer) => window.clearTimeout(timer));
+    pendingUiTimers.clear();
+    if (routexActivationTimer) window.clearTimeout(routexActivationTimer);
+    routexActivationTimer = null;
+    if (routexPanel) {
+      routexPanel.classList.remove("routex-is-open");
+      routexPanel.setAttribute("aria-hidden", "true");
+      routexPanel.inert = true;
+    }
+    routexConversation?.setAttribute("aria-busy", "false");
+    if (routexConversation) routexConversation.innerHTML = routexWelcome;
+    if ($("routexGreeting")) $("routexGreeting").textContent = state.me
+      ? `Olá, ${state.me.user.fullName.split(/\s+/)[0]}.` : "Olá.";
+    routexTrigger?.classList.remove("routex-is-processing", "routex-is-activating");
+    routexTrigger?.setAttribute("aria-expanded", "false");
+    routexTrigger?.setAttribute("aria-label", "Abrir ROUTEX");
+    if (routexQuestion) routexQuestion.value = "";
+  }
 
   /* ---------------------------------------------------------------- helpers */
   const $ = (id) => document.getElementById(id);
@@ -128,6 +208,7 @@
 
   function openModal({ title, body, actions }) {
     if (!wsModal) return;
+    state.modalScope = captureContext();
     modalOpener = document.activeElement;
     wsModalTitle.textContent = title;
     wsModalBody.innerHTML = body;
@@ -137,12 +218,14 @@
     (focusable || wsModal.querySelector("button"))?.focus();
   }
 
-  function closeModal() {
-    if (!wsModal || wsModal.hidden) return;
+  function closeModal(restoreFocus = true) {
+    state.modalScope = null;
+    if (!wsModal) return;
     wsModal.hidden = true;
+    wsModalTitle.textContent = "";
     wsModalBody.innerHTML = "";
     wsModalActions.innerHTML = "";
-    if (modalOpener && document.contains(modalOpener)) modalOpener.focus();
+    if (restoreFocus && modalOpener && document.contains(modalOpener)) modalOpener.focus();
     modalOpener = null;
   }
 
@@ -167,23 +250,22 @@
   const tenantPicker = $("tenantPicker");
   const tenantList = $("tenantList");
 
+  const transition = window.RoutflexTransition.create({
+    intent: '/workspace.html', render: window.RoutflexTransition.panel(),
+  });
+  function clearProtected() {
+    invalidateContext(true);
+    workspaceShell.hidden = true; authView.hidden = true; tenantPicker.hidden = true;
+    loginForm.closest('.ws-auth-card').hidden = true;
+  }
   function showAuth(message) {
-    state.me = null;
-    state.tenantId = null;
-    state.context = null;
-    workspaceShell.hidden = true;
-    authView.hidden = false;
-    tenantPicker.hidden = true;
-    loginForm.closest(".ws-auth-card").hidden = false;
-    if (message) {
-      loginError.textContent = message;
-      loginError.hidden = false;
-    } else {
-      loginError.hidden = true;
-    }
+    clearProtected();
+    transition.set('invalid', message || 'Não foi possível confirmar sua sessão.', () => window.location.reload());
   }
 
   function showPicker() {
+    transition.set("valid");
+    invalidateContext();
     authView.hidden = false;
     workspaceShell.hidden = true;
     loginForm.closest(".ws-auth-card").hidden = true;
@@ -210,55 +292,50 @@
 
   $("pickerLogout")?.addEventListener("click", () => doLogout());
 
-  loginForm?.addEventListener("submit", async (event) => {
+  loginForm?.addEventListener("submit", (event) => {
     event.preventDefault();
-    const email = $("loginEmail").value.trim();
-    const password = $("loginPassword").value;
-    if (!email || !password) return;
-    const submit = $("loginSubmit");
-    submit.disabled = true;
-    submit.textContent = "Autenticando…";
-    loginError.hidden = true;
-    try {
-      const session = await api.login(email, password);
-      Core.setToken(session.accessToken);
-      await loadMe();
-    } catch (error) {
-      showAuth(Core.friendlyError(error));
-    } finally {
-      submit.disabled = false;
-      submit.textContent = "Entrar no Workspace";
-    }
+    window.location.replace("/?returnTo=/workspace.html");
   });
 
-  Core.onUnauthenticated(() => {
-    try { window.sessionStorage.removeItem(STORAGE_TENANT); } catch (_) { /* noop */ }
-    showAuth("Sessão expirada. Autentique-se novamente.");
+  Core.onUnauthenticated(error => {
+    const wasValid = Boolean(state.me);
+    clearProtected(); transition.invalid(error, wasValid);
   });
 
   let logoutPending = false;
   async function doLogout() {
     if (logoutPending) return;
     logoutPending = true;
-    workspaceShell.hidden = true;
-    authView.hidden = true;
-    let message = "Sessão encerrada.";
-    try {
-      await Core.logout();
-    } catch (error) {
-      message = `Estado local encerrado; não foi possível confirmar a revogação no CORE. ${Core.friendlyError(error)}`;
-      console.warn('[Workspace] Logout remoto não confirmado:', error?.code || 'UNKNOWN_ERROR', error?.requestId || '');
-    } finally {
-      Core.clearSession();
-      try { window.sessionStorage.removeItem(STORAGE_TENANT); } catch (_) { /* noop */ }
-      showAuth(message);
-      logoutPending = false;
-    }
+    try { await transition.logout(Core, clearProtected); }
+    finally { logoutPending = false; }
   }
 
   async function loadMe() {
-    const me = await api.me();
+    const scope = captureContext("identity");
+    let me;
+    try { me = await api.me(); }
+    catch (error) {
+      if (!isCurrentContext(scope)) return;
+      throw error;
+    }
+    if (!isCurrentContext(scope)) return;
+    invalidateContext(true);
     state.me = me;
+
+    // CORE's existing administrative role is PLATFORM_OWNER. No membership/seat
+    // is required for the platform console; no browser-created role alias.
+    if (me.user.platformRole === "PLATFORM_OWNER") {
+      transition.navigate("/control-center/index.html");
+      return;
+    }
+
+    // A field-only identity never renders administrative Workspace cards.
+    const entry = await window.RoutflexDestination.resolve(Core, { me });
+    if (state.me !== me) return;
+    if (entry.kind === 'palm') { transition.navigate(entry.href); return; }
+    if (entry.kind === 'blocked' || (entry.kind === 'choose' && entry.fieldOnly)) {
+      transition.navigate('/?returnTo=/palm'); return;
+    }
 
     $("sessionIdentity").hidden = false;
     $("sessionAvatar").textContent = initials(me.user.fullName);
@@ -268,7 +345,8 @@
     if (greeting) greeting.textContent = `Olá, ${me.user.fullName.split(/\s+/)[0]}.`;
 
     if (!me.tenants.length) {
-      showAuth("Seu usuário está autenticado, porém sem vínculo com organizações. Solicite um convite ao administrador.");
+      showPicker();
+      tenantList.innerHTML = emptyCard("Seu usuário está autenticado, mas não possui acesso a uma organização. Solicite um convite ao administrador.");
       return;
     }
     let preferred = null;
@@ -281,25 +359,36 @@
 
   /* ======================================================== TENANT CONTEXT */
   async function selectTenant(tenantId) {
+    if (!state.me?.tenants?.some((tenant) => tenant.id === tenantId)) return;
+    invalidateContext();
     state.tenantId = tenantId;
-    state.blocked = null;
+    const scope = captureContext();
     try { window.sessionStorage.setItem(STORAGE_TENANT, tenantId); } catch (_) { /* noop */ }
 
     authView.hidden = true;
     workspaceShell.hidden = false;
+    transition.set("valid");
     $("switchTenant").hidden = !(state.me && state.me.tenants.length > 1);
     renderLoadingShell();
 
     try {
-      if (!state.catalog) state.catalog = await api.catalog();
+      if (!state.catalog) {
+        const catalog = await api.catalog();
+        if (!isCurrentContext(scope)) return;
+        state.catalog = catalog;
+      }
     } catch (error) {
+      if (!isCurrentContext(scope)) return;
       setBanner(`<div class="ws-banner ws-banner--error"><strong>Catálogo indisponível.</strong><span>${escapeHtml(Core.friendlyError(error))}</span><button class="secondary btn-mini" type="button" data-action="retry-context">Tentar novamente</button></div>`);
       return;
     }
 
     try {
-      state.context = await api.meContext(tenantId);
+      const context = await api.meContext(tenantId);
+      if (!isCurrentContext(scope)) return;
+      state.context = validateTenantContext(context, scope);
     } catch (error) {
+      if (!isCurrentContext(scope)) return;
       state.context = null;
       if (error.code === "TENANT_NOT_ACTIVE") {
         state.blocked = { kind: "TENANT", message: "Esta organização está suspensa. Os dados permanecem preservados e o acesso será restabelecido após regularização." };
@@ -436,7 +525,7 @@
       if (entry.hasEffectiveAccess) {
         const url = links[catalogModule.key];
         footer = url
-          ? `<a class="ws-btn-link" href="${escapeHtml(url)}" target="_blank" rel="noopener">Acessar</a>`
+          ? `<a class="ws-btn-link" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">Acessar</a>`
           : `<button type="button" data-action="module-url-missing" data-module="${escapeHtml(catalogModule.key)}">Acessar</button>`;
       } else if (entry.entitlementEffective && !entry.hasSeat) {
         if (canManageTeam) {
@@ -516,24 +605,31 @@
   }
 
   async function loadTeam() {
+    const scope = captureContext("team");
+    state.memberships = null;
+    state.roles = null;
     const container = $("teamContent");
     const actions = $("teamActions");
     actions.innerHTML = "";
 
     if (!can(PERM.MEMBER_READ)) {
+      state.memberships = null;
+      state.roles = null;
       container.innerHTML = noPermissionCard("A listagem de usuários exige a permissão core.member.read concedida a um dos seus papéis.");
       return;
     }
     container.innerHTML = skeleton(4);
     try {
       const [memberships, roles] = await Promise.all([
-        api.tenantMemberships(state.tenantId, { limit: 100 }),
-        can(PERM.ROLE_READ) ? api.tenantRoles(state.tenantId) : Promise.resolve(null),
+        api.tenantMemberships(scope.tenantId, { limit: 100 }),
+        can(PERM.ROLE_READ) ? api.tenantRoles(scope.tenantId) : Promise.resolve(null),
       ]);
+      if (!isCurrentContext(scope)) return;
       state.memberships = memberships;
       state.roles = roles;
       renderTeam();
     } catch (error) {
+      if (!isCurrentContext(scope)) return;
       container.innerHTML = errorCard(Core.friendlyError(error), "retry-team");
     }
   }
@@ -592,13 +688,18 @@
   }
 
   async function loadInvitations() {
+    const scope = captureContext("invitations");
+    state.invitations = null;
     const container = $("invitesBlock");
-    if (!can(PERM.INVITATION_READ)) { container.innerHTML = ""; return; }
+    if (!can(PERM.INVITATION_READ)) { state.invitations = null; container.innerHTML = ""; return; }
     container.innerHTML = skeleton(2);
     try {
-      state.invitations = await api.tenantInvitations(state.tenantId);
+      const invitations = await api.tenantInvitations(scope.tenantId);
+      if (!isCurrentContext(scope)) return;
+      state.invitations = invitations;
       renderInvitations();
     } catch (error) {
+      if (!isCurrentContext(scope)) return;
       container.innerHTML = errorCard(Core.friendlyError(error), "retry-invites");
     }
   }
@@ -642,21 +743,28 @@
   }
 
   async function loadSeats() {
+    const scope = captureContext("seats");
+    state.seats = null;
+    state.entitlements = null;
     const container = $("licenseContent");
     if (!can(PERM.SEAT_READ)) {
+      state.seats = null;
+      state.entitlements = null;
       container.innerHTML = noPermissionCard("O consumo de licenças exige a permissão core.seat.read.");
       return;
     }
     container.innerHTML = skeleton(3);
     try {
       const [seats, entitlements] = await Promise.all([
-        api.tenantSeats(state.tenantId),
-        can(PERM.ENTITLEMENT_READ) ? api.tenantEntitlements(state.tenantId) : Promise.resolve(null),
+        api.tenantSeats(scope.tenantId),
+        can(PERM.ENTITLEMENT_READ) ? api.tenantEntitlements(scope.tenantId) : Promise.resolve(null),
       ]);
+      if (!isCurrentContext(scope)) return;
       state.seats = seats;
       state.entitlements = entitlements;
       renderSeats();
     } catch (error) {
+      if (!isCurrentContext(scope)) return;
       container.innerHTML = errorCard(Core.friendlyError(error), "retry-seats");
     }
   }
@@ -710,16 +818,22 @@
   }
 
   async function loadSecurity() {
+    const scope = captureContext("audit");
+    state.audit = null;
     const container = $("securityContent");
     if (!can(PERM.AUDIT_READ)) {
+      state.audit = null;
       container.innerHTML = noPermissionCard("A auditoria da organização exige a permissão core.audit.read_tenant.");
       return;
     }
     container.innerHTML = skeleton(4);
     try {
-      state.audit = await api.tenantAudit(state.tenantId, { limit: 8 });
+      const audit = await api.tenantAudit(scope.tenantId, { limit: 8 });
+      if (!isCurrentContext(scope)) return;
+      state.audit = audit;
       renderSecurity();
     } catch (error) {
+      if (!isCurrentContext(scope)) return;
       container.innerHTML = errorCard(Core.friendlyError(error), "retry-audit");
     }
   }
@@ -741,16 +855,22 @@
   }
 
   async function loadSettings() {
+    const scope = captureContext("settings");
+    state.tenantRecord = null;
     const container = $("settingsContent");
     if (!can(PERM.TENANT_READ_SELF)) {
+      state.tenantRecord = null;
       container.innerHTML = noPermissionCard("Os dados corporativos exigem a permissão core.tenant.read_self.");
       return;
     }
     container.innerHTML = skeleton(3);
     try {
-      state.tenantRecord = await api.tenantGet(state.tenantId);
+      const tenantRecord = await api.tenantGet(scope.tenantId);
+      if (!isCurrentContext(scope)) return;
+      state.tenantRecord = tenantRecord;
       renderSettings();
     } catch (error) {
+      if (!isCurrentContext(scope)) return;
       container.innerHTML = errorCard(Core.friendlyError(error), "retry-settings");
     }
   }
@@ -829,6 +949,9 @@
   }
 
   async function submitInvite() {
+    const scope = captureContext();
+    const modal = state.modalScope;
+    const current = () => isCurrentContext(scope) && modal === state.modalScope;
     const email = $("inviteEmail")?.value.trim();
     const roleIds = Array.from(document.querySelectorAll('input[name="inviteRole"]:checked')).map((input) => input.value);
     const unitIds = Array.from(document.querySelectorAll('input[name="inviteUnit"]:checked')).map((input) => input.value);
@@ -844,19 +967,21 @@
     if (seatModule && seatType) payload.intendedSeats = [{ moduleKey: seatModule, seatTypeKey: seatType }];
 
     try {
-      const result = await api.tenantCreateInvitation(state.tenantId, payload);
+      const result = await api.tenantCreateInvitation(scope.tenantId, payload);
+      if (!current()) return;
       openModal({
         title: "Convite criado",
         body: `
           <p>Convite registrado para <strong>${escapeHtml(email)}</strong>.</p>
           <p class="ws-token-warning">O link abaixo é exibido <strong>uma única vez</strong>. Copie e envie ao convidado por canal seguro.</p>
-          <div class="ws-token-box"><code id="inviteTokenValue">${escapeHtml(Core.invitationUrl(result.token, state.tenantId))}</code><button class="secondary btn-mini" type="button" data-action="copy-token">Copiar link</button></div>
+          <div class="ws-token-box"><code id="inviteTokenValue">${escapeHtml(Core.invitationUrl(result.token, scope.tenantId))}</code><button class="secondary btn-mini" type="button" data-action="copy-token">Copiar link</button></div>
           <p class="ws-dim">Expira em ${fmtDate(result.invitation?.expiresAt)}.</p>`,
         actions: `<button type="button" data-ws-modal-close>Concluir</button>`,
       });
       toast("Convite criado com sucesso.");
       await Promise.all([loadInvitations(), loadSeats()]);
     } catch (error) {
+      if (!current()) return;
       errorEl.textContent = Core.friendlyError(error);
       errorEl.hidden = false;
     }
@@ -915,21 +1040,26 @@
   }
 
   async function changeMemberRole(membershipId, roleId, grant, button) {
+    const { generation, tenantId, me, modalScope } = state;
+    const current = () => generation === state.generation && tenantId === state.tenantId && me === state.me && modalScope === state.modalScope;
+    const isSelf = me && memberById(membershipId)?.user.id === me.user.id;
     button.disabled = true;
     try {
-      if (grant) await api.tenantGrantRole(state.tenantId, membershipId, roleId);
-      else await api.tenantRevokeRole(state.tenantId, membershipId, roleId);
-      const isSelf = state.me && memberById(membershipId)?.user.id === state.me.user.id;
+      if (grant) await api.tenantGrantRole(tenantId, membershipId, roleId);
+      else await api.tenantRevokeRole(tenantId, membershipId, roleId);
+      if (!current()) return;
       if (isSelf) {
-        state.context = await api.meContext(state.tenantId);
-        renderContext();
+        await selectTenant(tenantId);
+        return;
       }
       await loadTeam();
+      if (!current()) return;
       toast(grant ? "Papel atribuído." : "Papel revogado.");
       if (can(PERM.ROLE_READ) && (can(PERM.ROLE_ASSIGN) || can(PERM.ROLE_REVOKE))) openRoleModal(membershipId);
       else closeModal();
       loadSecurity();
     } catch (error) {
+      if (!current()) return;
       const line = $("roleError");
       if (line) { line.textContent = Core.friendlyError(error); line.hidden = false; }
       button.disabled = false;
@@ -937,20 +1067,23 @@
   }
 
   async function assignSeat(membershipId) {
+    const scope = captureContext();
+    const modal = state.modalScope;
+    const current = () => isCurrentContext(scope) && modal === state.modalScope;
+    const isSelf = state.me && memberById(membershipId)?.user.id === state.me.user.id;
     const moduleKey = $("seatModule")?.value;
     const seatTypeKey = $("seatTypeSelect")?.value;
     const errorEl = $("seatError");
     if (!moduleKey || !seatTypeKey) return;
     try {
-      await api.tenantAssignSeat(state.tenantId, membershipId, { moduleKey, seatTypeKey });
+      await api.tenantAssignSeat(scope.tenantId, membershipId, { moduleKey, seatTypeKey });
+      if (!current()) return;
+      if (isSelf) { await selectTenant(scope.tenantId); return; }
       toast("Licença atribuída.");
       closeModal();
       await Promise.all([loadTeam(), loadSeats()]);
-      if (state.me && memberById(membershipId)?.user.id === state.me.user.id) {
-        state.context = await api.meContext(state.tenantId);
-        renderContext();
-      }
     } catch (error) {
+      if (!current()) return;
       if (errorEl) {
         if (error.code === "SEAT_QUOTA_EXCEEDED" && error.details) {
           const det = error.details;
@@ -964,16 +1097,19 @@
   }
 
   async function releaseSeat(membershipId, seatAssignmentId) {
+    const scope = captureContext();
+    const modal = state.modalScope;
+    const current = () => isCurrentContext(scope) && modal === state.modalScope;
+    const isSelf = state.me && memberById(membershipId)?.user.id === state.me.user.id;
     try {
-      await api.tenantReleaseSeat(state.tenantId, membershipId, seatAssignmentId);
+      await api.tenantReleaseSeat(scope.tenantId, membershipId, seatAssignmentId);
+      if (!current()) return;
+      if (isSelf) { await selectTenant(scope.tenantId); return; }
       toast("Licença liberada.");
       closeModal();
       await Promise.all([loadTeam(), loadSeats()]);
-      if (state.me && memberById(membershipId)?.user.id === state.me.user.id) {
-        state.context = await api.meContext(state.tenantId);
-        renderContext();
-      }
     } catch (error) {
+      if (!current()) return;
       toast(Core.friendlyError(error), "danger");
     }
   }
@@ -994,26 +1130,33 @@
   }
 
   async function confirmSuspendMember(membershipId) {
+    const { generation, tenantId, me, modalScope } = state;
+    const current = () => generation === state.generation && tenantId === state.tenantId && me === state.me && modalScope === state.modalScope;
     const reason = $("suspendReason")?.value.trim() || "";
     const errorEl = $("suspendError");
     if (reason.length < 3) { errorEl.textContent = "Informe um motivo com pelo menos 3 caracteres."; errorEl.hidden = false; return; }
     try {
-      await api.tenantSuspendMember(state.tenantId, membershipId, reason);
+      await api.tenantSuspendMember(tenantId, membershipId, reason);
+      if (!current()) return;
       toast("Usuário suspenso.");
       closeModal();
       await Promise.all([loadTeam(), loadSeats()]);
     } catch (error) {
+      if (!current()) return;
       errorEl.textContent = Core.friendlyError(error);
       errorEl.hidden = false;
     }
   }
 
   async function reactivateMember(membershipId) {
+    const scope = captureContext();
     try {
-      await api.tenantReactivateMember(state.tenantId, membershipId);
+      await api.tenantReactivateMember(scope.tenantId, membershipId);
+      if (!isCurrentContext(scope)) return;
       toast("Usuário reativado.");
       loadTeam();
     } catch (error) {
+      if (!isCurrentContext(scope)) return;
       toast(Core.friendlyError(error), "danger");
     }
   }
@@ -1030,20 +1173,53 @@
   }
 
   async function confirmRevokeInvite(invitationId) {
+    const { generation, tenantId, me, modalScope } = state;
+    const current = () => generation === state.generation && tenantId === state.tenantId && me === state.me && modalScope === state.modalScope;
     try {
-      await api.tenantRevokeInvitation(state.tenantId, invitationId);
+      await api.tenantRevokeInvitation(tenantId, invitationId);
+      if (!current()) return;
       toast("Convite encerrado; eventuais reservas foram liberadas.");
       closeModal();
       await Promise.all([loadInvitations(), loadSeats()]);
     } catch (error) {
+      if (!current()) return;
       toast(Core.friendlyError(error), "danger");
     }
   }
 
   /* ------------------------------------------------------ delegated clicks */
+  function actionAllowed(target) {
+    if (!target || !document.contains(target) || workspaceShell.hidden || !state.me || !state.tenantId) return false;
+    const action = target.dataset.action;
+    if (action === "retry-context") return state.me.tenants.some((tenant) => tenant.id === state.tenantId);
+    if (!state.context || state.context.tenant.id !== state.tenantId) return false;
+    const modalAction = ["submit-invite", "grant-role", "revoke-role", "assign-seat", "release-seat", "confirm-suspend-member", "confirm-revoke-invite", "copy-token"].includes(action);
+    if ((modalAction || wsModal?.contains(target)) &&
+        (!wsModal || wsModal.hidden || !wsModal.contains(target) || !state.modalScope || !isCurrentContext(state.modalScope))) return false;
+    const required = {
+      "open-invite": PERM.MEMBER_INVITE, "submit-invite": PERM.MEMBER_INVITE,
+      "grant-role": PERM.ROLE_ASSIGN, "revoke-role": PERM.ROLE_REVOKE,
+      "assign-seat": PERM.SEAT_ASSIGN, "release-seat": PERM.SEAT_RELEASE,
+      "member-suspend": PERM.MEMBER_SUSPEND, "confirm-suspend-member": PERM.MEMBER_SUSPEND,
+      "member-reactivate": PERM.MEMBER_REACTIVATE,
+      "invite-revoke": PERM.INVITATION_REVOKE, "confirm-revoke-invite": PERM.INVITATION_REVOKE,
+    }[action];
+    if (required && !can(required)) return false;
+    if (target.dataset.membershipId) {
+      const member = memberById(target.dataset.membershipId);
+      if (!member) return false;
+      if (["member-suspend", "confirm-suspend-member"].includes(action) &&
+          (member.isTenantOwner || member.user.id === state.me.user.id)) return false;
+      if (action === "release-seat" && !member.seats?.some((seat) => seat.seatAssignmentId === target.dataset.seatId && seat.state === "ACTIVE")) return false;
+    }
+    if (target.dataset.roleId && !state.roles?.some((role) => role.id === target.dataset.roleId)) return false;
+    if (target.dataset.invitationId && !state.invitations?.some((invite) => invite.id === target.dataset.invitationId)) return false;
+    return true;
+  }
+
   document.addEventListener("click", (event) => {
     const target = event.target.closest("[data-action]");
-    if (!target) return;
+    if (!actionAllowed(target)) return;
     const action = target.dataset.action;
 
     switch (action) {
@@ -1057,7 +1233,7 @@
       case "module-url-missing":
         openModal({
           title: "Acesso liberado — URL não configurada",
-          body: `<p>O Platform Core confirma seu acesso a este módulo, porém a URL de acesso não está configurada neste ambiente.</p><p class="ws-dim">Configuração local: chave <code>routflex.workspace.moduleLinks</code> no localStorage.</p>`,
+          body: `<p>Seu acesso foi confirmado, mas este módulo ainda não está disponível neste ambiente. Entre em contato com o administrador.</p>`,
         });
         break;
       case "open-invite": openInviteModal(); break;
@@ -1074,8 +1250,12 @@
       case "invite-revoke": openRevokeInviteModal(target.dataset.invitationId, target.dataset.email); break;
       case "confirm-revoke-invite": confirmRevokeInvite(target.dataset.invitationId); break;
       case "copy-token": {
+        const scope = captureContext();
+        const modal = state.modalScope;
         const token = $("inviteTokenValue")?.textContent || "";
-        navigator.clipboard?.writeText(token).then(() => toast("Link copiado."), () => toast("Não foi possível copiar automaticamente.", "warning"));
+        navigator.clipboard?.writeText(token).then(
+          () => { if (isCurrentContext(scope) && modal === state.modalScope) toast("Link copiado."); },
+          () => { if (isCurrentContext(scope) && modal === state.modalScope) toast("Não foi possível copiar automaticamente.", "warning"); });
         break;
       }
       default: break;
@@ -1086,6 +1266,19 @@
     try { window.sessionStorage.removeItem(STORAGE_TENANT); } catch (_) { /* noop */ }
     showPicker();
   });
+
+  /* ====================================================== SIDEBAR VISUAL */
+  const sidebarToggle = $("sidebarToggle");
+  if (sidebarToggle) {
+    sidebarToggle.addEventListener("click", () => {
+      const collapsed = workspaceShell.classList.toggle("is-sidebar-collapsed");
+      const label = collapsed ? "Expandir menu lateral" : "Recolher menu lateral";
+      sidebarToggle.setAttribute("aria-expanded", String(!collapsed));
+      sidebarToggle.setAttribute("aria-label", label);
+      sidebarToggle.title = label;
+    });
+    sidebarToggle.hidden = false;
+  }
 
   /* ================================================================ NAV */
   const navLinks = Array.from(document.querySelectorAll(".workspace-nav a"));
@@ -1152,6 +1345,7 @@
   const routexPanel = document.getElementById("routexPanel");
   const routexClose = document.getElementById("routexClose");
   const routexConversation = document.getElementById("routexConversation");
+  const routexWelcome = routexConversation?.innerHTML || "";
   const routexForm = document.getElementById("routexQuestionForm");
   const routexQuestion = document.getElementById("routexQuestion");
   const routexReduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -1319,10 +1513,14 @@
   }
 
   function queueRoutexAnswer(topic, userLabel = "") {
+    if (!state.context || workspaceShell.hidden) return;
+    const scope = captureContext();
     if (userLabel) appendRoutexMessage(`<p>${escapeHtml(userLabel)}</p>`, true);
     const processing = appendRoutexProcessing();
     routexTrigger?.classList.add("routex-is-processing");
-    window.setTimeout(() => {
+    const timer = window.setTimeout(() => {
+      pendingUiTimers.delete(timer);
+      if (!isCurrentContext(scope)) return;
       processing?.remove();
       renderRoutexAnswer(topic);
       if (!routexConversation?.querySelector(".routex-message-processing")) {
@@ -1330,10 +1528,12 @@
         routexTrigger?.classList.remove("routex-is-processing");
       }
     }, routexReduceMotion ? 80 : 520);
+    pendingUiTimers.add(timer);
   }
 
   function openRoutex() {
-    if (!routexPanel) return;
+    if (!routexPanel || !state.context || workspaceShell.hidden) return;
+    const scope = captureContext();
     routexPanel.inert = false;
     routexPanel.classList.add("routex-is-open");
     routexPanel.setAttribute("aria-hidden", "false");
@@ -1347,7 +1547,11 @@
       routexTrigger?.classList.remove("routex-is-activating");
       routexActivationTimer = null;
     }, 480);
-    window.setTimeout(() => routexQuestion?.focus(), routexReduceMotion ? 0 : 180);
+    const timer = window.setTimeout(() => {
+      pendingUiTimers.delete(timer);
+      if (isCurrentContext(scope)) routexQuestion?.focus();
+    }, routexReduceMotion ? 0 : 180);
+    pendingUiTimers.add(timer);
   }
 
   function closeRoutex() {
@@ -1382,18 +1586,22 @@
   });
 
   /* ================================================================ BOOT */
-  if (Core.demoRequested()) {
-    const flag = $("demoFlag");
-    if (flag) { flag.hidden = false; flag.removeAttribute("aria-hidden"); }
-  }
+  Core.watchSession?.(async (me) => {
+    if (!state.me) return;
+    if (me.user.platformRole === "PLATFORM_OWNER" || !me.tenants.some(t => t.id === state.tenantId)) return loadMe();
+    const scope = captureContext();
+    const context = await api.meContext(scope.tenantId);
+    if (!isCurrentContext(scope)) return;
+    validateTenantContext(context, scope);
+    if (JSON.stringify(context) !== JSON.stringify(state.context)) await loadMe();
+  });
 
   (async function boot() {
-    const hadAccessToken = Boolean(Core.getToken());
     try {
       // /me é a autoridade; sem access, o cliente tenta refresh HttpOnly uma vez.
       await loadMe();
     } catch (error) {
-      showAuth(error.status === 401 && !hadAccessToken ? undefined : Core.friendlyError(error));
+      clearProtected(); transition.invalid(error, false);
     }
   })();
 })();

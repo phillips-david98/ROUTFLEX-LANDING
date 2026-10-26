@@ -5,6 +5,11 @@ const test = require('node:test');
 const vm = require('node:vm');
 
 const source = fs.readFileSync(path.join(__dirname, '..', 'core-client.js'), 'utf8');
+const USER_A = '11111111-1111-4111-8111-111111111111';
+const SESSION_A = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+function identity(tenants = []) {
+  return { user: { id: USER_A, status: 'ACTIVE' }, authenticationSessionId: SESSION_A, tenants };
+}
 
 test('contratos administrativos usam autoridade e tenant da rota, sem conceder roles no browser', async () => {
   const calls = [];
@@ -115,10 +120,10 @@ test('401 do access faz um refresh e repete a request apenas uma vez', async () 
     if (url.endsWith('/auth/refresh')) return reply(200, { accessToken: 'access-b' });
     return options.headers.Authorization === 'Bearer access-a'
       ? reply(401, { error: { code: 'UNAUTHENTICATED' } })
-      : reply(200, { user: { id: 'u1' } });
+      : reply(200, identity());
   });
   Core.setToken('access-a');
-  assert.equal((await Core.api.me()).user.id, 'u1');
+  assert.equal((await Core.api.me()).user.id, USER_A);
   assert.equal(Core.getToken(), 'access-b');
   assert.deepEqual(calls.map((call) => new URL(call.url).pathname),
     ['/core/me', '/core/auth/refresh', '/core/me']);
@@ -131,7 +136,7 @@ test('F5 sem access restaura sessao por refresh antes de /me e contexto', async 
   const { Core } = client(async (url, options) => {
     calls.push({ url, options });
     if (url.endsWith('/auth/refresh')) return reply(200, { accessToken: 'restored' });
-    if (url.endsWith('/me')) return reply(200, { user: { id: 'u1' }, tenants: [{ id: 't1' }] });
+    if (url.endsWith('/me')) return reply(200, identity([{ id: 't1' }]));
     return reply(200, { tenant: { id: 't1' } });
   });
   const me = await Core.api.me();
@@ -227,7 +232,7 @@ test('tres requests com 401 compartilham uma rotacao', async () => {
       return reply(401, { error: { code: 'UNAUTHENTICATED' } });
     }
     retries++;
-    return reply(200, { ok: true });
+    return reply(200, url.endsWith('/me') ? identity() : { ok: true });
   });
   Core.setToken('old');
   await Promise.all([Core.api.me(), Core.api.catalog(), Core.api.meContext('t1')]);
@@ -291,7 +296,7 @@ test('resposta antiga nao reabre estado autenticado depois do logout', async () 
     if (url.endsWith('/auth/logout')) return reply(204);
     meStarted();
     await waitingMe;
-    return reply(200, { user: { id: 'u1' } });
+    return reply(200, identity());
   });
   Core.setToken('old');
   const pendingMe = Core.api.me();
