@@ -523,7 +523,13 @@
       let extraNote = "";
 
       if (entry.hasEffectiveAccess) {
-        const url = links[catalogModule.key];
+        let url = links[catalogModule.key];
+        if (url && catalogModule.key === "ops") {
+          // Preserve the selected CORE context; OPS revalidates this public hint.
+          const destination = new URL(url);
+          destination.searchParams.set("tenantId", state.context.tenant.id);
+          url = destination.href;
+        }
         footer = url
           ? `<a class="ws-btn-link" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">Acessar</a>`
           : `<button type="button" data-action="module-url-missing" data-module="${escapeHtml(catalogModule.key)}">Acessar</button>`;
