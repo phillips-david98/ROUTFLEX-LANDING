@@ -50,7 +50,7 @@ test('display contours stay subpixel, inherit through wordmarks and prioritize t
   const stroke = rule => Number(rule.match(/--rfx-display-stroke:\s*([\d.]+)px/)[1]);
   assert.equal(stroke(base), 0.18);
   assert.equal(stroke(hero), 0.26);
-  assert.equal(stroke(intro), 0.34);
+  assert.equal(stroke(intro), 0.42);
   assert.ok(stroke(base) < stroke(hero) && stroke(hero) < stroke(intro) && stroke(intro) < 0.5);
   const contourRules = [...editorial.matchAll(/([^{}]+)\{[^{}]*-webkit-text-stroke:\s*var\(--rfx-display-stroke\) currentColor;[^{}]*\}/g)];
   assert.equal(contourRules.length, 2);
@@ -59,14 +59,18 @@ test('display contours stay subpixel, inherit through wordmarks and prioritize t
   for (const rule of contourRules) assert.match(rule[0], /font-weight: 400/);
 });
 
-test('new blue LED halo is static and restricted to the intro signature', () => {
+test('intro light is a static diffuse layer behind the lettering, without changing its timing', () => {
   const shadowRules = [...editorial.matchAll(/([^{}]+)\{([^{}]*text-shadow:[^{}]*)\}/g)];
   assert.equal(shadowRules.length, 1);
   assert.equal(shadowRules[0][1].trim(), '.rfx-landing .rfx-brand-intro-logo');
-  const layers = [...shadowRules[0][2].matchAll(/0 0 (\d+)px rgba\(59, 168, 245, ([\d.]+)\)/g)];
-  assert.equal(layers.length, 3);
-  assert.deepEqual(layers.map(layer => Number(layer[1])), [6, 18, 34]);
-  assert.deepEqual(layers.map(layer => Number(layer[2])), [0.32, 0.22, 0.12]);
+  assert.match(shadowRules[0][2], /text-shadow: none/);
+  const halo = css.match(/\.rfx-landing \.rfx-brand-intro-mark::before \{([^}]+)\}/)[1];
+  assert.match(halo, /z-index: -1/);
+  assert.match(halo, /background: radial-gradient\(ellipse, rgba\(38, 119, 195, \.22\)/);
+  assert.match(halo, /pointer-events: none/);
+  assert.doesNotMatch(halo, /animation|filter|text-shadow/);
+  assert.match(html, /is-leaving[^;]*; \}, 1500\)/);
+  assert.match(html, /introEl.hidden = true; \}, 2150\)/);
   assert.doesNotMatch(editorial, /(?:^|[;{}])\s*(?:animation[\w-]*|transition[\w-]*|filter|opacity)\s*:/);
 });
 

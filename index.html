@@ -17,6 +17,7 @@
   <noscript><style>.rfx-brand-intro{display:none}</style></noscript>
   <meta name="referrer" content="no-referrer">
   <link rel="stylesheet" href="inline-auth.css">
+  <link rel="stylesheet" href="auth-recovery.css">
 </head>
 <body class="rfx-landing">
   <!-- BRAND INTRO (scaffold) — brief one-time signature shown before the Hero.
@@ -78,7 +79,7 @@
 
       <section class="hero-section" aria-label="ROUTflex HUB central operacional enterprise" aria-roledescription="carrossel" data-hero-carousel>
         <div class="hero-slides" aria-hidden="true">
-          <div class="hero-slide hero-slide--original is-active" data-hero-slide>
+          <div class="hero-slide hero-slide--original is-active" data-hero-slide data-hero-scene="logistics" data-hero-duration="9100">
             <div class="hero-logistics-scene">
               <img class="hero-opening-image" src="assets/Rede%20Global%20de%20Log%C3%ADstica%20Noturna.png" alt="" width="1672" height="941" loading="eager" fetchpriority="high" decoding="async">
               <svg class="hero-logistics-flow" viewBox="0 0 1672 941" preserveAspectRatio="xMidYMax slice" focusable="false" aria-hidden="true">
@@ -293,19 +294,19 @@
               </svg>
             </div>
           </div>
-          <div class="hero-slide hero-slide--image" data-hero-slide>
+          <div class="hero-slide hero-slide--image" data-hero-slide data-hero-scene="operations">
             <img src="assets/hero-1.png" alt="" width="1717" height="916" loading="eager" decoding="async">
           </div>
-          <div class="hero-slide hero-slide--image" data-hero-slide>
+          <div class="hero-slide hero-slide--image" data-hero-slide data-hero-scene="territorial">
             <img src="assets/hero-2.png" alt="" width="1717" height="916" loading="lazy" decoding="async">
           </div>
-          <div class="hero-slide hero-slide--image" data-hero-slide>
+          <div class="hero-slide hero-slide--image" data-hero-slide data-hero-scene="enterprise">
             <img src="assets/banner-2.png" alt="" width="1717" height="916" loading="eager" decoding="async">
           </div>
           <!-- ROUTEX hero state — reuses the ROUTEX composition/copy (previously a
                standalone section, now the sole ROUTEX presentation) and stays ~1s
                longer than the other slides (data-hero-duration); see script.js. -->
-          <div class="hero-slide hero-slide--routex" data-hero-slide data-hero-duration="8600">
+          <div class="hero-slide hero-slide--routex" data-hero-slide data-hero-scene="routex" data-hero-duration="8600">
             <div class="hero-routex-stage">
               <div class="container hero-routex-align">
               <div class="hero-routex-visual">
@@ -377,11 +378,14 @@
         <div class="container hero-inner">
           <div class="hero-copy reveal">
             <div class="hero-copy-panel hero-copy-panel--default is-dimmed" data-hero-copy-panel="default" aria-hidden="true" inert>
+            <div class="hero-copy-message">
             <span class="eyebrow eyebrow-light">Ecossistema Enterprise SaaS</span>
             <h1>A central operacional do seu ecossistema empresarial.</h1>
             <p class="hero-lead">
               <span class="rfx-wordmark"><span class="brand-rout">ROUT</span><span class="brand-flex">flex</span></span> HUB integra planejamento territorial, execucao operacional, mobilidade em campo e gestao comercial em uma unica infraestrutura SaaS enterprise &mdash; multiempresa, multimodulo, controle total.
             </p>
+            </div>
+            <div class="hero-copy-footer">
             <div class="hero-actions">
               <a class="button button-primary" href="#contato">Solicitar acesso enterprise</a>
               <a class="button button-ghost" href="#ecossistema">Explorar o ecossistema</a>
@@ -408,24 +412,46 @@
               </div>
             </div>
             </div>
+            </div>
             <div class="hero-copy-panel hero-copy-panel--opening is-active" data-hero-copy-panel="opening">
-              <h1><span class="rfx-wordmark"><span class="brand-rout">ROUT</span><span class="brand-flex">flex</span></span>. Roteirização inteligente no centro do seu ecossistema operacional.</h1>
-              <p class="hero-lead">Planeje territórios, rotas de entrega e operações de campo conectando planejamento, logística e execução em uma única plataforma.</p>
+              <div class="hero-copy-message">
+              <span class="eyebrow eyebrow-light">Do planejamento à execução</span>
+              <h1><span class="rfx-wordmark"><span class="brand-rout">ROUT</span><span class="brand-flex">flex</span></span> Planning</h1>
+              <p class="rfx-premium-tagline">Roteirização inteligente, integrada à sua operação.</p>
+              <p class="hero-lead">Planeje territórios, organize rotas e conecte planejamento e execução. Avalie a conexão com os sistemas que sua empresa já utiliza.</p>
+              </div>
+              <div class="hero-copy-footer">
               <div class="hero-actions">
-                <a class="button button-primary" href="#contato">Solicitar acesso enterprise</a>
-                <a class="button button-ghost" href="#ecossistema">Explorar o ecossistema</a>
+                <a class="button button-primary" href="#planning-showcase" data-planning-link>Conheça o Planning</a>
+                <button class="button button-ghost" type="button" data-presentation-open aria-haspopup="dialog" aria-controls="planning-presentation">Assistir apresentação</button>
+              </div>
               </div>
             </div>
             <div class="hero-copy-panel hero-copy-panel--routex" data-hero-copy-panel="routex" aria-hidden="true" inert>
+              <div class="hero-copy-message">
               <span class="eyebrow eyebrow-light">Intelig&ecirc;ncia operacional ROUTflex</span>
               <h1>A intelig&ecirc;ncia viva do ecossistema <span class="rfx-wordmark"><span class="brand-rout">ROUT</span><span class="brand-flex">flex</span></span>.</h1>
               <p class="hero-lead">
                 O ROUTEX automatiza rotinas, conecta m&oacute;dulos e transforma dados operacionais em pr&oacute;ximas a&ccedil;&otilde;es.
               </p>
+              </div>
+              <div class="hero-copy-footer">
               <div class="hero-actions">
                 <a class="button button-primary" href="#contato">Conhecer o ROUTEX</a>
               </div>
+              </div>
             </div>
+            <figure class="rfx-premium-devices">
+              <div class="rfx-premium-hardware">
+                <div class="rfx-premium-laptop">
+                  <img src="assets/planning-real-preview.jpg" alt="Captura real do Planning: clientes distribuídos em territórios no mapa." width="1024" height="652" decoding="async">
+                </div>
+                <div class="rfx-premium-phone">
+                  <img src="assets/palm-real-preview.png" alt="Captura real do PALM em homologação: execução de visitas e paradas concluídas com clientes fictícios." width="372" height="820" decoding="async">
+                </div>
+              </div>
+              <figcaption>Planning no escritório. PALM em campo. <span>Capturas de demonstração.</span></figcaption>
+            </figure>
           </div>
           <div class="hero-login">
             <div class="hero-login-card inline-auth" id="acesso" aria-label="Acesso corporativo">
@@ -439,7 +465,10 @@
               <form id="inlineLoginForm" hidden method="post" autocomplete="on">
                 <label for="inlineEmail">E-mail corporativo</label>
                 <input id="inlineEmail" name="email" type="email" autocomplete="username" required maxlength="254" placeholder="voce@empresa.com.br">
-                <label for="inlinePassword">Senha</label>
+                <div class="inline-password-label">
+                  <label for="inlinePassword">Senha</label>
+                  <button id="inlineForgotPassword" class="recovery-link" type="button" hidden>Esqueceu sua senha?</button>
+                </div>
                 <div class="inline-password">
                   <input id="inlinePassword" name="password" type="password" autocomplete="current-password" required aria-describedby="inlineLoginError">
                   <button id="inlineShowPassword" class="inline-password-toggle" type="button" aria-label="Mostrar senha" title="Mostrar senha" aria-controls="inlinePassword" aria-pressed="false">
@@ -597,39 +626,64 @@
       </section>
 
       <!-- MODULE DETAIL — PLANNING -->
-      <section class="section module-detail-section module-planning-section" aria-label="ROUTflex Planning detalhe">
+      <section class="section module-detail-section module-planning-section" id="planning-showcase" data-planning-showcase aria-label="ROUTflex Planning detalhe" tabindex="-1">
         <div class="container">
-          <div class="module-detail-inner">
-            <div class="module-detail-copy module-detail-copy--planning rfx-planning-reveal-copy">
-              <span class="module-pill module-pill--planning">Planning ROUTflex</span>
-              <h2>Planejamento territorial com IA para reduzir custos e aumentar produtividade em campo.</h2>
-              <p>Equilibre carteiras, simule cenarios e antecipe decisoes operacionais antes que deslocamentos, sobreposicoes e retrabalho virem custo para a empresa.</p>
-              <ul class="module-detail-list">
-                <li><span class="mdl-check" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3,8 6,11 13,4"/></svg></span><span><strong>Menos deslocamento improdutivo</strong> &mdash; identifique sobreposicoes, vazios de cobertura e oportunidades por territorio.</span></li>
-                <li><span class="mdl-check" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3,8 6,11 13,4"/></svg></span><span><strong>Mais produtividade por rota</strong> &mdash; organize clientes por regiao, frequencia, potencial e capacidade de atendimento.</span></li>
-                <li><span class="mdl-check" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3,8 6,11 13,4"/></svg></span><span><strong>Simulacao antes da execucao</strong> &mdash; teste mudancas de territorio sem afetar a operacao real.</span></li>
-                <li><span class="mdl-check" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3,8 6,11 13,4"/></svg></span><span><strong>Governanca da operacao de campo</strong> &mdash; acompanhe DDDs, vendedores, ciclos e carteiras em uma visao centralizada.</span></li>
-              </ul>
-              <div class="planning-proof-strip" aria-label="Indicadores operacionais do Planning">
-                <span>4 semanas planejadas</span>
-                <span>Ate 8 ciclos simulaveis</span>
-                <span>Capacidade ajustavel por operacao</span>
-                <span>Visao por DDD e territorio</span>
-              </div>
-              <a class="planning-inline-cta" href="#contato">Solicitar demonstracao do Planning</a>
+          <header class="module-detail-copy rfx-showcase-heading">
+            <span class="module-pill module-pill--planning">ROUTflex Planning</span>
+            <h2>Sua operação, no mesmo mapa.</h2>
+            <p>Do território à rota: explore o planejamento que aproxima escritório e campo.</p>
+          </header>
+          <div class="rfx-planning-network">
+            <ul class="rfx-planning-connections" aria-label="Possibilidades de conexão com o ecossistema">
+              <li>ERP</li><li>CRM</li><li>APIs</li><li>Dados e arquivos</li><li>ROUTflex OPS</li>
+            </ul>
+            <svg class="rfx-planning-lines" viewBox="0 0 1000 120" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+              <g class="rfx-planning-wires" fill="none">
+                <path d="M100 0C100 80 500 40 500 120"/><path d="M300 0C300 64 500 48 500 120"/>
+                <path d="M500 0V120"/><path d="M700 0C700 64 500 48 500 120"/><path d="M900 0C900 80 500 40 500 120"/>
+              </g>
+              <g class="rfx-planning-packets" fill="none">
+                <path pathLength="100" d="M100 0C100 80 500 40 500 120"/><path pathLength="100" d="M300 0C300 64 500 48 500 120"/>
+                <path pathLength="100" d="M500 0V120"/><path pathLength="100" d="M700 0C700 64 500 48 500 120"/><path pathLength="100" d="M900 0C900 80 500 40 500 120"/>
+              </g>
+            </svg>
+            <div class="rfx-planning-hub"><span aria-hidden="true"></span><strong>ROUTflex Planning</strong></div>
+          </div>
+          <p class="rfx-planning-disclaimer">Conexões ilustrativas. Integrações externas sujeitas à avaliação técnica, sem indicação de homologação.</p>
+          <div class="rfx-planning-stage">
+            <div class="rfx-planning-features" role="group" aria-label="Explorar funcionalidades do Planning">
+              <button type="button" data-planning-feature="geral" aria-pressed="true" aria-controls="planning-demo-panel">Visão geral</button>
+              <button type="button" data-planning-feature="territorial" aria-pressed="false" aria-controls="planning-demo-panel">Territorial</button>
+              <button type="button" data-planning-feature="operacional" aria-pressed="false" aria-controls="planning-demo-panel">Operacional</button>
+              <button type="button" data-planning-feature="ins" aria-pressed="false" aria-controls="planning-demo-panel">INS</button>
+              <button type="button" data-planning-feature="manifesto" aria-pressed="false" aria-controls="planning-demo-panel">Manifesto</button>
+              <button type="button" data-planning-feature="ciclos" aria-pressed="false" aria-controls="planning-demo-panel">Ciclos de planejamento</button>
             </div>
-            <div class="module-detail-media rfx-planning-reveal-media">
-              <div class="module-frame module-frame--planning">
+            <div class="rfx-planning-demo" id="planning-demo-panel" role="region" aria-labelledby="planning-demo-title">
+              <div class="module-frame module-frame--planning rfx-planning-frame">
                 <div class="frame-chrome" aria-hidden="true">
                   <div class="frame-dots"><span></span><span></span><span></span></div>
                   <span class="frame-url">app.routflex.com.br &mdash; Planning</span>
                 </div>
-                <video autoplay muted loop playsinline preload="metadata" aria-label="Demonstracao ROUTflex Planning">
-                  <source src="assets/balancear.mp4" type="video/mp4">
-                </video>
+                <div class="rfx-planning-screen">
+                  <img data-planning-image src="assets/planning-real-preview.jpg" alt="Captura real do mapa territorial do ROUTflex Planning." width="1024" height="652" loading="lazy" decoding="async">
+                  <video data-planning-video hidden muted playsinline controls preload="none" aria-label="Vídeo real de balanceamento territorial do ROUTflex Planning">
+                    <source data-src="assets/balancear.mp4" type="video/mp4">
+                  </video>
+                </div>
               </div>
+              <div class="rfx-planning-summary" aria-live="polite" aria-atomic="true">
+                <h3 id="planning-demo-title" data-planning-title>Planejamento em movimento</h3>
+                <p data-planning-description>Veja o balanceamento territorial na interface real do Planning.</p>
+                <p class="rfx-planning-note" data-planning-note>Vídeo real de balanceamento territorial. Reprodução sob demanda.</p>
+              </div>
+              <div class="rfx-planning-controls">
+                <button class="button button-ghost rfx-planning-play" type="button" data-planning-play hidden>Reproduzir demonstração geral</button>
+              </div>
+              <p class="rfx-planning-status" data-planning-status role="status"></p>
             </div>
           </div>
+          <div class="rfx-planning-cta"><a class="button button-primary" href="#contato">Solicitar demonstração do Planning</a></div>
         </div>
       </section>
 
@@ -1073,7 +1127,23 @@
   <script src="core-client.js"></script>
   <script src="destination-resolver.js"></script>
   <script src="auth-transition.js"></script>
+  <dialog class="rfx-presentation-dialog" id="planning-presentation" data-presentation-dialog aria-modal="true" aria-labelledby="planning-presentation-title" aria-describedby="planning-presentation-description">
+    <div class="rfx-presentation-header">
+      <span class="eyebrow eyebrow-light">ROUTflex Planning</span>
+      <button class="rfx-presentation-close" type="button" data-presentation-close autofocus aria-label="Fechar apresentação">Fechar <span aria-hidden="true">×</span></button>
+    </div>
+    <div class="rfx-presentation-content">
+      <h2 id="planning-presentation-title">Conheça o ROUTflex Planning</h2>
+      <p id="planning-presentation-description">Do planejamento à execução. Use os controles para assistir à apresentação.</p>
+      <video data-presentation-video controls playsinline preload="none" aria-label="Apresentação do ROUTflex Planning">
+        <source data-src="assets/video-hero.mp4" type="video/mp4">
+      </video>
+      <p class="rfx-presentation-status" data-presentation-status role="status" hidden></p>
+    </div>
+  </dialog>
   <script src="inline-auth.js"></script>
+  <script src="auth-recovery-client.js"></script>
+  <script src="auth-recovery.js"></script>
   <script src="cinematic.js"></script>
   <script src="script.js"></script>
   <script src="routex-hero.js"></script>

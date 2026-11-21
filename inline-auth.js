@@ -85,7 +85,9 @@
   async function route(navigate, selectedTenantId) {
     const attempt = ++generation; transition.set('initializing', 'Confirmando seu acesso…');
     try {
-      const result = await Resolver.resolve(Core, { selectedTenantId, returnTo });
+      // The explicit access mode selects intent; CORE still decides access.
+      const intent = accessMode === 'field' ? '/palm' : returnTo === '/palm' ? '/workspace.html' : returnTo;
+      const result = await Resolver.resolve(Core, { selectedTenantId, returnTo: intent });
       if (attempt !== generation) return;
       if (navigate && result.href) go(result); else render(result);
     } catch (failure) { if (attempt === generation) { clear(); message(failureText(failure), true); } }

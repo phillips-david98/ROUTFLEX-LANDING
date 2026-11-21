@@ -11,9 +11,18 @@ function fixture(){
 }
 test('PLATFORM_OWNER has no membership/seat dependency and ignores returnTo',async()=>{const f=fixture();f.me.user.platformRole='PLATFORM_OWNER';f.me.tenants=[];f.Core.api.meContext=()=>{throw Error('MUST_NOT_QUERY');};assert.equal((await R.resolve(f.Core,{returnTo:'/palm'})).href,'/control-center/index.html');});
 test('field-only identity goes directly to PALM from canonical context',async()=>{const f=fixture(),r=await R.resolve(f.Core);assert.equal(r.kind,'palm');assert.equal(new URL(r.href).searchParams.get('tenantId'),f.ctx.tenant.id);assert.ok(!r.href.includes('token'));});
+test('a tenant-defined field execution role goes directly to PALM even with Workspace intent',async()=>{
+ const f=fixture();f.ctx.roles.push({key:'CUSTOM_FIELD_EXECUTION',isSystem:false});
+ f.ctx.permissions.push('palm.route.read','palm.execution.write','core.operation_session.read');
+ for(const returnTo of [undefined,'/workspace.html','/ops','/planning']){
+  const result=await R.resolve(f.Core,{returnTo});assert.equal(result.kind,'palm');assert.equal(result.tenantId,f.ctx.tenant.id);
+ }
+});
 for(const [name,mutate] of [
  ['tenant owner',f=>f.ctx.membership.isTenantOwner=true],
  ['tenant administrator',f=>f.ctx.roles.push({key:'TENANT_ADMIN',isSystem:true})],
+ ['unknown system role with limited permissions',f=>f.ctx.roles.push({key:'FUTURE_SYSTEM_ROLE',isSystem:true})],
+ ['custom role with administrative permission',f=>{f.ctx.roles.push({key:'CUSTOM_ADMIN',isSystem:false});f.ctx.permissions.push('core.member.read');}],
  ['administrative permission',f=>f.ctx.permissions.push('core.member.read')],
  ['Planning operator',f=>{f.ctx.roles=[{key:'OPERATOR',isSystem:true}];f.ctx.modules[0].moduleKey='planning';}],
  ['OPS operator',f=>{f.ctx.roles=[{key:'OPERATOR',isSystem:true}];f.ctx.modules[0].moduleKey='ops';}],
@@ -30,6 +39,11 @@ for(const [name,mutate] of [
  ['CORE access denied',f=>f.Core.api.meContext=async()=>{throw {status:403};}]
 ])test(name+' cannot route field identity to a product or Workspace',async()=>{const f=fixture();mutate(f);assert.equal((await R.resolve(f.Core)).kind,'blocked');});
 test('multiple field organizations need a minimal choice, never a stored/URL privilege',async()=>{const f=fixture(),second=structuredClone(f.me.tenants[0]);second.id=randomUUID();second.membershipId=randomUUID();f.me.tenants.push(second);f.Core.api.meContext=async id=>({...f.ctx,tenant:{...f.ctx.tenant,id},membership:{...f.ctx.membership,id:id===second.id?second.membershipId:f.ctx.membership.id}});const r=await R.resolve(f.Core,{selectedTenantId:randomUUID()});assert.equal(r.kind,'choose');assert.equal(r.fieldOnly,true);assert.equal(r.choices.length,2);assert.equal((await R.resolve(f.Core,{selectedTenantId:second.id})).tenantId,second.id);});
+test('administrative duties in another tenant keep Workspace preference',async()=>{
+ const f=fixture(),second=structuredClone(f.me.tenants[0]);second.id=randomUUID();second.membershipId=randomUUID();f.me.tenants.push(second);
+ f.Core.api.meContext=async id=>id===f.ctx.tenant.id?f.ctx:{...f.ctx,tenant:{...f.ctx.tenant,id},membership:{...f.ctx.membership,id:second.membershipId,isTenantOwner:true}};
+ assert.equal((await R.resolve(f.Core)).kind,'workspace');
+});
 test('field name or email never determines routing',async()=>{const f=fixture();f.ctx.roles=[{key:'OPERATOR',isSystem:true}];assert.equal((await R.resolve(f.Core)).kind,'workspace');f.ctx.roles=[{key:'FIELD_AGENT',isSystem:true}];f.me.user.email='admin@example.test';assert.equal((await R.resolve(f.Core)).kind,'palm');});
 test('permitted internal intention uses reviewed module URL and effective authorization',async()=>{const f=fixture();f.ctx.roles=[{key:'OPERATOR',isSystem:true}];f.ctx.modules[0].moduleKey='ops';assert.equal((await R.resolve(f.Core,{returnTo:'/ops'})).kind,'ops');assert.equal((await R.resolve(f.Core,{returnTo:'/planning'})).kind,'workspace');assert.equal((await R.resolve(f.Core,{returnTo:'/control-center/index.html'})).kind,'workspace');});
 test('field policy overrides manipulated administrative intention',async()=>{const f=fixture();assert.equal((await R.resolve(f.Core,{returnTo:'/workspace.html'})).kind,'palm');});

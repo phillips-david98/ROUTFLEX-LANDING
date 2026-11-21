@@ -86,6 +86,8 @@
   }
 
   function invalidateContext(clearIdentity = false) {
+    document.dispatchEvent(new CustomEvent('routflex:protected-context-cleared'));
+    window.RoutflexBilling?.reset();
     state.generation += 1;
     state.loads = Object.create(null); // Logical cancellation; no claim that an accepted write was cancelled.
     state.tenantId = null;
@@ -453,6 +455,7 @@
     $("licenseContent").innerHTML = blockedCard;
     $("marketContent").innerHTML = "";
     $("settingsContent").innerHTML = blockedCard;
+    if ($("billingContent")) $("billingContent").innerHTML = blockedCard;
   }
 
   /* ------------------------------------------------------------ render base */
@@ -509,11 +512,18 @@
 
   function renderModules() {
     const links = Core.moduleLinks();
+    const logos = {
+      planning: "assets/Emblema de rota azul com três pontos.png",
+      ops: "assets/Hub operacional azul com três conexões.png",
+      palm: "assets/Emblema azul de execução móvel.png",
+      sales: "assets/Emblema azul de crescimento em vendas.png",
+    };
     const catalogModules = (state.catalog?.modules || []).slice().sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
     const canManageTeam = can(PERM.MEMBER_READ);
 
     $("moduleGrid").innerHTML = catalogModules.map((catalogModule) => {
       const meta = MODULE_META[catalogModule.key] || { short: "?", iconClass: "planning", fallbackName: catalogModule.name };
+      const logo = Object.hasOwn(logos, catalogModule.key) ? logos[catalogModule.key] : null;
       const entry = moduleEntry(catalogModule.key);
       const stateLabel = LABELS.entitlementState[entry.entitlementState] || entry.entitlementState;
       const tone = ENT_TONE[entry.entitlementState] || "notc";
@@ -522,9 +532,13 @@
       let footer = "";
       let extraNote = "";
 
-      if (entry.hasEffectiveAccess) {
+      if (catalogModule.key === "palm") {
+        // Workspace presents management information; drivers enter PALM directly.
+        extraNote = `<p class="ws-card-note">O motorista acessa suas rotas diretamente no PALM com sua conta. Este cartão reúne informações de acesso e licenciamento.</p>`;
+        if (canManageTeam) footer = `<button type="button" data-action="go-team">Gerenciar equipe</button>`;
+      } else if (entry.hasEffectiveAccess) {
         let url = links[catalogModule.key];
-        if (url && catalogModule.key === "ops") {
+        if (url && (catalogModule.key === "ops" || catalogModule.key === "sales")) {
           // Preserve the selected CORE context; OPS revalidates this public hint.
           const destination = new URL(url);
           destination.searchParams.set("tenantId", state.context.tenant.id);
@@ -556,7 +570,7 @@
       return `
         <article class="module-card${entry.hasEffectiveAccess ? " module-active" : ""}">
           <div class="module-head">
-            <span class="module-icon ${escapeHtml(meta.iconClass)}">${escapeHtml(meta.short)}</span>
+            <span class="module-icon ${escapeHtml(meta.iconClass)}">${logo ? `<img src="${escapeHtml(logo)}" alt="" width="48" height="48">` : escapeHtml(meta.short)}</span>
             ${badge(tone, stateLabel)}
           </div>
           <h3>${escapeHtml(catalogModule.name)}</h3>
@@ -603,11 +617,18 @@
 
   /* ==================================================== SECONDARY LOADERS */
   function loadSecondaryData() {
+    loadBilling();
     loadTeam();
     loadInvitations();
     loadSeats();
     loadSecurity();
     loadSettings();
+  }
+
+  function loadBilling() {
+    const scope = captureContext("billing");
+    window.RoutflexBilling?.load({ tenantId: scope.tenantId, allowed: can("core.billing.read"),
+      current: () => isCurrentContext(scope) && Boolean(state.context), api });
   }
 
   async function loadTeam() {
@@ -664,6 +685,8 @@
       }).join("") || `<span class="ws-dim">—</span>`;
 
       const rowActions = [];
+      if (state.context?.membership?.isTenantOwner && can(PERM.MEMBER_INVITE) && member.status === 'ACTIVE') rowActions.push(`<button class="secondary btn-mini" type="button" data-recovery-member="${escapeHtml(member.membershipId)}" data-recovery-tenant="${escapeHtml(state.context.tenant.id)}">Recuperar acesso</button>`);
+      if (state.context?.membership?.isTenantOwner && can(PERM.ROLE_ASSIGN) && can(PERM.ROLE_REVOKE)) rowActions.push(`<button class="secondary btn-mini" type="button" data-action="member-planning-capabilities" data-membership-id="${escapeHtml(member.membershipId)}">Permissões Planning</button>`);
       if (canSeats) rowActions.push(`<button class="secondary btn-mini" type="button" data-action="member-seats" data-membership-id="${escapeHtml(member.membershipId)}">Licenças</button>`);
       if (can(PERM.ROLE_READ) && (can(PERM.ROLE_ASSIGN) || can(PERM.ROLE_REVOKE))) rowActions.push(`<button class="secondary btn-mini" type="button" data-action="member-roles" data-membership-id="${escapeHtml(member.membershipId)}">Papéis</button>`);
       const isSelf = state.me && member.user.id === state.me.user.id;
@@ -1031,6 +1054,69 @@
     });
   }
 
+  function validatePlanningCapabilities(result, tenantId, membershipId) {
+    if (result?.tenantId !== tenantId || result?.membershipId !== membershipId ||
+        typeof result.hasEffectiveAccess !== "boolean" || ["capabilities", "effectiveCapabilities"].some(field =>
+          !result[field] || Object.keys(result[field]).length !== 3 ||
+          ["edit", "import", "export"].some(key => typeof result[field][key] !== "boolean"))) {
+      throw { code: "INVALID_PLANNING_CAPABILITIES", message: "Não foi possível confirmar as permissões deste usuário." };
+    }
+    return result;
+  }
+
+  async function openPlanningCapabilities(membershipId) {
+    const member = memberById(membershipId);
+    if (!member || !state.context?.membership?.isTenantOwner) return;
+    const scope = captureContext("planning-capabilities");
+    openModal({ title: `Permissões Planning — ${member.user.fullName}`, body: skeleton(3), actions: "" });
+    const modal = state.modalScope;
+    const current = () => isCurrentContext(scope) && modal === state.modalScope;
+    try {
+      const result = validatePlanningCapabilities(await api.tenantPlanningCapabilities(scope.tenantId, membershipId), scope.tenantId, membershipId);
+      if (!current()) return;
+      const caps = result.capabilities;
+      wsModalBody.innerHTML = `<p>O usuário pode consultar o Planning quando tiver licença e assento ativos. As opções abaixo controlam o que ele pode fazer.</p>
+        <div class="ws-check-list">
+          <label><input id="planningCapabilityEdit" type="checkbox" ${caps.edit ? "checked" : ""}> Pode editar Planning</label>
+          <label><input id="planningCapabilityImport" type="checkbox" ${caps.import ? "checked" : ""} ${caps.edit ? "" : "disabled"}> Pode importar clientes</label>
+          <label><input id="planningCapabilityExport" type="checkbox" ${caps.export ? "checked" : ""}> Pode exportar clientes e baixar backup operacional com dados</label>
+        </div><p class="ws-dim">Importar também exige edição. Publicação no OPS mantém sua autorização própria.</p>
+        ${result.hasEffectiveAccess ? "" : '<p class="ws-dim">Sem acesso efetivo no momento. Confira a contratação e a licença atribuída ao usuário.</p>'}
+        <p class="ws-form-error" id="planningCapabilitiesError" role="alert" hidden></p>`;
+      wsModalActions.innerHTML = `<button class="secondary" type="button" data-ws-modal-close>Cancelar</button><button type="button" data-action="save-planning-capabilities" data-membership-id="${escapeHtml(membershipId)}">Salvar permissões</button>`;
+      $("planningCapabilityEdit")?.addEventListener("change", () => {
+        const edit = $("planningCapabilityEdit").checked, importing = $("planningCapabilityImport");
+        importing.disabled = !edit;
+        if (!edit) importing.checked = false;
+      });
+    } catch (error) {
+      if (current()) wsModalBody.innerHTML = errorCard(Core.friendlyError(error));
+    }
+  }
+
+  async function savePlanningCapabilities(membershipId, button) {
+    const scope = captureContext("planning-capabilities-write"), modal = state.modalScope;
+    const current = () => isCurrentContext(scope) && modal === state.modalScope;
+    const payload = { edit: Boolean($("planningCapabilityEdit")?.checked),
+      import: Boolean($("planningCapabilityImport")?.checked), export: Boolean($("planningCapabilityExport")?.checked) };
+    if (payload.import && !payload.edit) return;
+    button.disabled = true;
+    try {
+      validatePlanningCapabilities(await api.tenantSetPlanningCapabilities(scope.tenantId, membershipId, payload), scope.tenantId, membershipId);
+      if (!current()) return;
+      const isSelf = memberById(membershipId)?.user.id === state.me?.user.id;
+      closeModal();
+      toast("Permissões Planning atualizadas.");
+      if (isSelf) await selectTenant(scope.tenantId);
+      else { await loadTeam(); if (isCurrentContext(scope)) loadSecurity(); }
+    } catch (error) {
+      if (!current()) return;
+      const line = $("planningCapabilitiesError");
+      if (line) { line.textContent = Core.friendlyError(error); line.hidden = false; }
+      button.disabled = false;
+    }
+  }
+
   function openRoleModal(membershipId) {
     const member = memberById(membershipId);
     if (!member) return;
@@ -1199,7 +1285,7 @@
     const action = target.dataset.action;
     if (action === "retry-context") return state.me.tenants.some((tenant) => tenant.id === state.tenantId);
     if (!state.context || state.context.tenant.id !== state.tenantId) return false;
-    const modalAction = ["submit-invite", "grant-role", "revoke-role", "assign-seat", "release-seat", "confirm-suspend-member", "confirm-revoke-invite", "copy-token"].includes(action);
+    const modalAction = ["submit-invite", "grant-role", "revoke-role", "assign-seat", "release-seat", "confirm-suspend-member", "confirm-revoke-invite", "copy-token", "save-planning-capabilities"].includes(action);
     if ((modalAction || wsModal?.contains(target)) &&
         (!wsModal || wsModal.hidden || !wsModal.contains(target) || !state.modalScope || !isCurrentContext(state.modalScope))) return false;
     const required = {
@@ -1211,6 +1297,8 @@
       "invite-revoke": PERM.INVITATION_REVOKE, "confirm-revoke-invite": PERM.INVITATION_REVOKE,
     }[action];
     if (required && !can(required)) return false;
+    if (["member-planning-capabilities", "save-planning-capabilities"].includes(action) &&
+        (!state.context.membership?.isTenantOwner || !can(PERM.ROLE_ASSIGN) || !can(PERM.ROLE_REVOKE))) return false;
     if (target.dataset.membershipId) {
       const member = memberById(target.dataset.membershipId);
       if (!member) return false;
@@ -1246,6 +1334,8 @@
       case "submit-invite": submitInvite(); break;
       case "member-seats": openSeatModal(target.dataset.membershipId); break;
       case "member-roles": openRoleModal(target.dataset.membershipId); break;
+      case "member-planning-capabilities": openPlanningCapabilities(target.dataset.membershipId); break;
+      case "save-planning-capabilities": savePlanningCapabilities(target.dataset.membershipId, target); break;
       case "grant-role": changeMemberRole(target.dataset.membershipId, target.dataset.roleId, true, target); break;
       case "revoke-role": changeMemberRole(target.dataset.membershipId, target.dataset.roleId, false, target); break;
       case "assign-seat": assignSeat(target.dataset.membershipId); break;
@@ -1294,7 +1384,10 @@
 
   function setActive(id) {
     navLinks.forEach(link => {
-      link.classList.toggle("is-active", link.dataset.section === id);
+      const active = link.dataset.section === id;
+      link.classList.toggle("is-active", active);
+      if (active) link.setAttribute("aria-current", "location");
+      else link.removeAttribute("aria-current");
     });
 
     const section = document.getElementById(id);
@@ -1308,8 +1401,21 @@
     link.addEventListener("click", () => setActive(link.dataset.section));
   });
 
+  function anchorSection() {
+    const id = window.location.hash.slice(1);
+    return sections.some(section => section.id === id) ? id : null;
+  }
+  function syncAnchor() {
+    setActive(anchorSection() || "workspace");
+  }
+  window.addEventListener("hashchange", syncAnchor);
+  syncAnchor();
+
   if ("IntersectionObserver" in window && sections.length) {
     const observer = new IntersectionObserver(entries => {
+      // An explicit URL anchor remains authoritative during async rendering,
+      // reload and native smooth scrolling; another visible section cannot win.
+      if (anchorSection()) return;
       const visible = entries
         .filter(entry => entry.isIntersecting)
         .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];

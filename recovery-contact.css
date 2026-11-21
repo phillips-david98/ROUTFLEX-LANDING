@@ -1,0 +1,10 @@
+.recovery-contact-dialog { width:min(92vw,460px); max-height:90vh; box-sizing:border-box; overflow:auto; border:1px solid #37516c; border-radius:16px; padding:24px; color:#e7f1ff; background:#101e2e; font-family:inherit; }
+.recovery-contact-dialog::backdrop { background:rgb(0 8 18 / 72%); }
+.recovery-contact-dialog h2 { margin:0 0 12px; font-size:21px; }
+.recovery-contact-dialog p { font-size:14px; line-height:1.5; }
+.recovery-contact-dialog label { display:block; margin:16px 0; font-size:14px; }
+.recovery-contact-dialog input { display:block; box-sizing:border-box; width:100%; padding:11px; margin-top:7px; border:1px solid #56718c; border-radius:8px; background:#091624; color:#fff; font:inherit; }
+.recovery-contact-dialog footer { display:flex; justify-content:flex-end; flex-wrap:wrap; gap:10px; margin-top:20px; }
+.recovery-contact-dialog button { padding:10px 14px; border:1px solid #56718c; border-radius:8px; background:#174774; color:#fff; font:inherit; cursor:pointer; }
+.recovery-contact-dialog button:disabled { opacity:.5; cursor:wait; }
+.recovery-contact-dialog [hidden] { display:none !important; }

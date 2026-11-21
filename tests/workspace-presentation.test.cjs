@@ -54,11 +54,11 @@ test('sidebar visual control is opt-in, reversible and accessible without changi
   assert.doesNotThrow(() => sidebarFixture(false));
 });
 
-test('collapsed navigation retains all seven original section targets, names, icons and native tooltips', () => {
+test('collapsed navigation retains original sections and adds Payments with accessible names, icons and tooltips', () => {
   const nav = html.match(/<nav class="workspace-nav"[^>]*>([\s\S]*?)<\/nav>/)[1];
   const links = [...nav.matchAll(/<a ([^>]+)>([\s\S]*?)<\/a>/g)];
-  assert.equal(links.length, 7);
-  const targets = ['workspace', 'modulos', 'usuarios', 'licenciamento', 'seguranca', 'marketplace', 'configuracoes'];
+  assert.equal(links.length, 8);
+  const targets = ['workspace', 'modulos', 'usuarios', 'licenciamento', 'pagamentos', 'seguranca', 'marketplace', 'configuracoes'];
   links.forEach(([_, attrs, content], index) => {
     assert.ok(attrs.includes(`href="#${targets[index]}"`));
     assert.ok(attrs.includes(`data-section="${targets[index]}"`));
@@ -75,22 +75,35 @@ test('collapsed navigation retains all seven original section targets, names, ic
 
 test('actual navigation handlers activate every section with the sidebar both expanded and collapsed', () => {
   const f = sidebarFixture();
-  const ids = ['workspace', 'modulos', 'usuarios', 'licenciamento', 'seguranca', 'marketplace', 'configuracoes'];
+  const ids = ['workspace', 'modulos', 'usuarios', 'licenciamento', 'pagamentos', 'seguranca', 'marketplace', 'configuracoes'];
   const nodes = new Map(ids.map(id => {
     const classes = new Set();
-    return [id, { classes, classList: { add: name => classes.add(name), remove: name => classes.delete(name) } }];
+    return [id, { id, classes, classList: { add: name => classes.add(name), remove: name => classes.delete(name) } }];
   }));
   const links = ids.map(id => {
-    const handlers = new Map(), classes = new Set();
+    const handlers = new Map(), classes = new Set(), attributes = new Map();
     return {
-      dataset: { section: id }, handlers, classes,
+      dataset: { section: id }, handlers, classes, attributes,
       classList: { toggle: (name, active) => active ? classes.add(name) : classes.delete(name) },
       addEventListener: (type, listener) => handlers.set(type, listener),
+      setAttribute: (key, value) => attributes.set(key, value),
+      removeAttribute: key => attributes.delete(key),
     };
   });
   f.context.document = { getElementById: id => nodes.get(id), querySelectorAll: () => links };
-  f.context.window = { requestAnimationFrame: callback => callback() };
+  const windowHandlers = new Map();
+  let observe;
+  f.context.window = { requestAnimationFrame: callback => callback(), location: { hash: '#pagamentos' },
+    addEventListener: (type, listener) => windowHandlers.set(type, listener), IntersectionObserver: true };
+  f.context.IntersectionObserver = class { constructor(callback) { observe = callback; } observe() {} };
   vm.runInContext(navigation, f.context);
+  const active = () => links.find(link => link.classes.has('is-active'));
+  assert.equal(active().dataset.section, 'pagamentos', 'direct URL and F5 select Payments');
+  observe([{ isIntersecting: true, intersectionRatio: 1, target: nodes.get('workspace') }]);
+  assert.equal(active().dataset.section, 'pagamentos', 'late layout observation cannot replace the anchor');
+  f.context.window.location.hash = '#usuarios'; windowHandlers.get('hashchange')();
+  assert.equal(active().dataset.section, 'usuarios');
+  assert.equal(active().attributes.get('aria-current'), 'location');
   for (const collapsed of [false, true]) {
     if (collapsed) f.handlers.get('click')();
     for (const link of links) {

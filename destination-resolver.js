@@ -7,7 +7,7 @@
   'use strict';
   const uuid = value => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
   const active = value => ['ACTIVE', 'TRIAL'].includes(value);
-  const fieldPermissions = new Set(['core.tenant.read_self', 'palm.route.read']);
+  const fieldPermissions = new Set(['core.tenant.read_self', 'core.operation_session.read', 'palm.route.read', 'palm.execution.write']);
   const intents = new Set(['/workspace.html', '/control-center/index.html', '/planning', '/ops', '/palm']);
   const invalid = () => Object.assign(new Error('O contexto de acesso não pôde ser confirmado.'), { code: 'INVALID_ENTRY_CONTEXT' });
   function intent(search) {
@@ -32,7 +32,11 @@
         || ['entitlementEffective', 'hasSeat', 'hasEffectiveAccess'].some(k => typeof m[k] !== 'boolean'))
       || new Set(ctx.modules.map(m => m.moduleKey)).size !== ctx.modules.length) throw invalid();
     const modules = ctx.modules.filter(m => m.hasEffectiveAccess && m.hasSeat && m.entitlementEffective);
-    const fieldRole = ctx.roles.length > 0 && ctx.roles.every(r => r.key === 'FIELD_AGENT' && r.isSystem === true);
+    // Tenant-defined execution roles may complement the canonical field role.
+    // Effective permissions and modules still exclude administrative duties;
+    // an unknown system role never becomes field authority by name or email.
+    const fieldRole = ctx.roles.some(r => r.key === 'FIELD_AGENT' && r.isSystem === true)
+      && ctx.roles.every(r => !r.isSystem || r.key === 'FIELD_AGENT');
     const fieldOnly = !me.user.platformRole && !ctx.membership.isTenantOwner && fieldRole
       && ctx.permissions.every(p => fieldPermissions.has(p)) && modules.every(m => m.moduleKey === 'palm');
     const palm = modules.find(m => m.moduleKey === 'palm' && m.seatTypeKey === 'FIELD_SEAT');

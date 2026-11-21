@@ -28,6 +28,7 @@
 
   function showSlide(index) {
     activeIndex = (index + slides.length) % slides.length;
+    carousel.dataset.heroScene = slides[activeIndex].dataset.heroScene;
 
     slides.forEach((slide, slideIndex) => {
       slide.classList.toggle("is-active", slideIndex === activeIndex);
@@ -65,9 +66,10 @@
 
   function startAutoplay() {
     stopAutoplay();
-    if (reduceMotion || document.hidden) return;
+    if (reduceMotion || document.hidden || carousel.contains(document.activeElement) ||
+        document.querySelector("[data-presentation-dialog][open]")) return;
     // setTimeout (not setInterval) so each slide can carry its own duration
-    // (the ROUTEX state stays ~1s longer via data-hero-duration).
+    // (Planning and ROUTEX carry their longer dwell in data-hero-duration).
     timer = window.setTimeout(() => {
       showSlide(activeIndex + 1);
       startAutoplay();
@@ -97,6 +99,212 @@
 
   showSlide(0);
   startAutoplay();
+})();
+
+/* ATT04-D HERO: native dialog owns focus containment and background inertness. */
+(function initPlanningPresentation() {
+  const dialog = document.querySelector("[data-presentation-dialog]");
+  const opener = document.querySelector("[data-presentation-open]");
+  const link = document.querySelector("[data-planning-link]");
+  if (!dialog || !opener || !link) return;
+  const video = dialog.querySelector("[data-presentation-video]");
+  const videoSource = video.querySelector("source");
+  const status = dialog.querySelector("[data-presentation-status]");
+  let returnFocus = null;
+
+  opener.addEventListener("click", () => {
+    returnFocus = opener;
+    dialog.showModal();
+    document.body.classList.add("rfx-presentation-open");
+    if (!videoSource.getAttribute("src")) {
+      videoSource.src = videoSource.dataset.src;
+      video.load();
+    }
+  });
+  function showVideoError() {
+    if (!videoSource.getAttribute("src")) return;
+    status.textContent = "Não foi possível carregar a apresentação. Verifique sua conexão e tente novamente pelo player.";
+    status.hidden = false;
+  }
+  video.addEventListener("error", showVideoError);
+  videoSource.addEventListener("error", showVideoError);
+  video.addEventListener("loadedmetadata", () => { status.hidden = true; });
+  video.addEventListener("playing", () => { status.hidden = true; });
+  dialog.querySelector("[data-presentation-close]").addEventListener("click", () => dialog.close());
+  dialog.addEventListener("keydown", event => {
+    if (event.key !== "Escape" || document.fullscreenElement) return;
+    event.preventDefault();
+    dialog.close();
+  });
+  dialog.addEventListener("close", () => {
+    dialog.querySelectorAll("video").forEach(video => video.pause());
+    document.body.classList.remove("rfx-presentation-open");
+    if (returnFocus?.isConnected) returnFocus.focus({ preventScroll: true });
+    returnFocus = null;
+  });
+  link.addEventListener("click", event => {
+    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    const target = document.querySelector(link.getAttribute("href"));
+    if (!target) return;
+    event.preventDefault();
+    target.scrollIntoView({
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth",
+      block: "start"
+    });
+    target.focus({ preventScroll: true });
+  });
+})();
+
+/* ATT04-D SHOWCASE: one user-initiated player, real captures, no background polling. */
+(function initPlanningShowcase() {
+  const stage = document.querySelector("[data-planning-showcase]");
+  if (!stage || stage.dataset.planningReady === "true") return;
+  stage.dataset.planningReady = "true";
+  const buttons = Array.from(stage.querySelectorAll("[data-planning-feature]"));
+  const image = stage.querySelector("[data-planning-image]");
+  const video = stage.querySelector("[data-planning-video]");
+  const videoSource = video.querySelector("source");
+  const title = stage.querySelector("[data-planning-title]");
+  const description = stage.querySelector("[data-planning-description]");
+  const note = stage.querySelector("[data-planning-note]");
+  const play = stage.querySelector("[data-planning-play]");
+  const status = stage.querySelector("[data-planning-status]");
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const events = new AbortController();
+  const listen = (element, type, handler) => element.addEventListener(type, handler, { signal: events.signal });
+  const features = {
+    geral: {
+      title: "Planejamento em movimento",
+      description: "Veja o balanceamento territorial na interface real do Planning.",
+      image: "assets/planning-real-preview.jpg",
+      alt: "Captura real do mapa territorial do ROUTflex Planning.",
+      note: "Vídeo real de balanceamento territorial. Reprodução sob demanda.",
+      video: videoSource.dataset.src
+    },
+    territorial: {
+      title: "Territórios com visão de conjunto",
+      description: "Visualize a distribuição de clientes e a cobertura dos territórios no mapa.",
+      image: "assets/planning-real-preview.jpg",
+      alt: "Captura real da divisão territorial de clientes no Planning.",
+      note: "Captura real. Vídeo específico de Territorial em preparação."
+    },
+    operacional: {
+      title: "Da carteira à rota",
+      description: "Organize clientes por motorista e acompanhe a distribuição operacional no mapa.",
+      image: "assets/planning-operational-preview.jpg",
+      alt: "Captura real do mapa de execução do Planning, com motorista e agenda semanal.",
+      note: "Captura real. Vídeo específico de Operacional em preparação."
+    },
+    ins: {
+      title: "INS: contexto para planejar",
+      description: "Consulte a ficha do cliente e seu perfil logístico para orientar o planejamento.",
+      image: "assets/planning-ins-preview.png",
+      alt: "Captura real da ficha INS de um cliente fictício, com classificação e perfil logístico.",
+      note: "Captura de homologação com dados fictícios. Vídeo de INS em preparação."
+    },
+    manifesto: {
+      title: "A rota em detalhe",
+      description: "Consulte paradas, sequência e indicadores disponíveis no manifesto de planejamento.",
+      image: "assets/planning-manifest-preview.jpg",
+      alt: "Captura real do manifesto do Planning com paradas e indicadores de uma rota fictícia.",
+      note: "Captura de homologação com dados fictícios. Vídeo de Manifesto em preparação."
+    },
+    ciclos: {
+      title: "Ciclos de planejamento",
+      description: "Distribua visitas entre semanas e dias operacionais para organizar a recorrência.",
+      image: "assets/planning-real-preview.jpg",
+      alt: "Captura histórica real do Planning com os controles de quatro semanas e dias operacionais.",
+      note: "A captura ilustra quatro semanas. Vídeo atualizado dos ciclos de 4 a 8 semanas em preparação."
+    }
+  };
+  let active = "geral", inView = false, pageActive = true, generation = 0;
+  const canPlay = () => inView && pageActive && !document.hidden && Boolean(features[active]?.video);
+  function pauseDemo() { generation++; video.pause(); }
+  function syncMotion() {
+    stage.classList.toggle("is-in-view", inView && pageActive && !document.hidden && !reduced.matches);
+  }
+  function select(key) {
+    if (!Object.hasOwn(features, key)) {
+      status.textContent = "Este recurso não está disponível na demonstração.";
+      return;
+    }
+    active = key;
+    pauseDemo();
+    const feature = features[key];
+    image.hidden = false; video.hidden = true;
+    image.src = feature.image; image.alt = feature.alt;
+    title.textContent = feature.title; description.textContent = feature.description; note.textContent = feature.note;
+    play.hidden = !feature.video; status.textContent = "";
+    buttons.forEach(button => button.setAttribute("aria-pressed", String(button.dataset.planningFeature === key)));
+  }
+  function mediaError() {
+    pauseDemo(); video.hidden = true; image.hidden = false;
+    status.textContent = "Não foi possível reproduzir o vídeo. A captura real continua disponível; tente novamente.";
+  }
+  buttons.forEach((button, index) => {
+    listen(button, "click", () => select(button.dataset.planningFeature));
+    listen(button, "keydown", event => {
+      const direction = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[event.key];
+      let next;
+      if (direction) next = (index + direction + buttons.length) % buttons.length;
+      else if (event.key === "Home") next = 0;
+      else if (event.key === "End") next = buttons.length - 1;
+      else return;
+      event.preventDefault(); buttons[next].focus(); select(buttons[next].dataset.planningFeature);
+    });
+  });
+  listen(play, "click", async () => {
+    if (!canPlay()) {
+      status.textContent = "Mantenha a demonstração visível para reproduzir o vídeo.";
+      return;
+    }
+    const attempt = ++generation;
+    if (!videoSource.getAttribute("src") || video.error) {
+      videoSource.src = features[active].video;
+      video.load();
+    }
+    image.hidden = true; video.hidden = false;
+    status.textContent = "Carregando demonstração…";
+    try {
+      await video.play();
+      if (attempt !== generation) return;
+      if (!canPlay()) { pauseDemo(); return; }
+      status.textContent = "";
+    } catch (error) {
+      if (attempt !== generation) return;
+      mediaError();
+    }
+  });
+  listen(video, "play", () => { if (!canPlay()) pauseDemo(); });
+  const onMediaError = () => { if (!video.hidden) mediaError(); };
+  listen(video, "error", onMediaError);
+  listen(videoSource, "error", onMediaError);
+  listen(image, "error", () => { status.textContent = "Captura indisponível. Consulte a descrição ou solicite uma demonstração."; });
+  listen(document, "visibilitychange", () => { if (document.hidden) pauseDemo(); syncMotion(); });
+  listen(reduced, "change", syncMotion);
+  let observer = null;
+  if ("IntersectionObserver" in window) {
+    observer = new IntersectionObserver(([entry]) => {
+      inView = entry.isIntersecting;
+      if (!inView) pauseDemo();
+      syncMotion();
+    }, { threshold: 0 });
+    observer.observe(stage);
+  } else {
+    const measure = () => {
+      const rect = stage.getBoundingClientRect();
+      inView = rect.bottom > 0 && rect.top < window.innerHeight;
+      if (!inView) pauseDemo();
+      syncMotion();
+    };
+    listen(window, "scroll", measure); listen(window, "resize", measure); measure();
+  }
+  listen(window, "pagehide", event => {
+    pageActive = false; pauseDemo(); syncMotion();
+    if (!event.persisted) { observer?.disconnect(); events.abort(); }
+  });
+  listen(window, "pageshow", () => { pageActive = true; syncMotion(); });
+  select(active);
 })();
 
 /* HERO — local continuation, with the current fixed header kept clear. */

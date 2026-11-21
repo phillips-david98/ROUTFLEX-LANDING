@@ -59,13 +59,16 @@ function fixture(overrides = {}) {
   const storage = new Map();
   const context = {
     state, $, PERM, Map, Set, Symbol, console,
+    CustomEvent: class { constructor(type) { this.type = type; } },
     api: { catalog: async () => ({ modules: [], seatTypes: [] }), me: async () => me(), meContext: async (id) => tenantContext(id),
       tenantMemberships: async () => [], tenantRoles: async () => [], tenantInvitations: async () => [],
       tenantSeats: async () => [], tenantEntitlements: async () => [], tenantAudit: async () => [], tenantGet: async (id) => ({ id }), ...overrides },
     Core: { friendlyError: (error) => error.message || error.code, invitationUrl: (token, tenantId) => `${tenantId}/${token}` },
     document: { contains: (target) => target.connected !== false, activeElement: null,
+      dispatchEvent: event => { calls.push(['event', event.type]); return true; },
       querySelectorAll: (selector) => selector.includes('inviteRole') ? [{ value: 'role-a' }] : [], getElementById: $ },
-    window: { sessionStorage: { getItem: (key) => storage.get(key) || null, setItem: (key, value) => storage.set(key, value), removeItem: (key) => storage.delete(key) },
+    window: { location: { hash: '' }, addEventListener() {}, requestAnimationFrame: fn => fn(),
+      sessionStorage: { getItem: (key) => storage.get(key) || null, setItem: (key, value) => storage.set(key, value), removeItem: (key) => storage.delete(key) },
       setTimeout: (fn) => { timers.set(++timerId, fn); return timerId; }, clearTimeout: (id) => timers.delete(id) },
     STORAGE_TENANT: 'synthetic-selection', LABELS: { tenantStatus: {}, membershipStatus: {} }, MODULE_META: {},
     TENANT_TONE: {}, toastTimer: null, modalOpener: null, routexActivationTimer: null,
@@ -80,7 +83,7 @@ function fixture(overrides = {}) {
   vm.createContext(context);
   vm.runInContext(fs.readFileSync(path.join(__dirname,'../auth-transition.js'),'utf8'), context);
   context.transition = context.window.RoutflexTransition.create({render:context.window.RoutflexTransition.panel()});
-  context.window.location = {replace: value => calls.push(['navigate',value]),reload(){}};
+  context.window.location = {hash: '', replace: value => calls.push(['navigate',value]),reload(){}};
   vm.runInContext(routines, context);
   context.loadSecondaryData = () => {};
   context.renderContext = () => { rendered.push({ tenant: state.tenantId, version: state.context.version }); $('tenantName').textContent = state.context.version; };
@@ -93,6 +96,84 @@ function fixture(overrides = {}) {
   context.renderRoutexAnswer = (topic) => calls.push(['routex', topic]);
   return { c: context, state, $, calls, rendered, timers, storage };
 }
+
+const noPlanning = { edit: false, import: false, export: false };
+function planningResponse(member = MEMBER_A) {
+  return { tenantId: A, membershipId: member, capabilities: { ...noPlanning }, effectiveCapabilities: { ...noPlanning }, hasEffectiveAccess: true };
+}
+function planningFixture(api = {}) {
+  const f = fixture({ tenantPlanningCapabilities: async () => planningResponse(), ...api });
+  f.state.context.membership.isTenantOwner = true;
+  f.state.memberships = [{ membershipId: MEMBER_A, user: { id: USER, fullName: 'Member' }, roles: [], seats: [] }];
+  return f;
+}
+
+test('Planning modal exposes exactly three controls and import follows edit', async () => {
+  const f = planningFixture();
+  await f.c.openPlanningCapabilities(MEMBER_A);
+  assert.equal((f.c.wsModalBody.innerHTML.match(/type="checkbox"/g) || []).length, 3);
+  assert.match(f.c.wsModalBody.innerHTML, /planningCapabilityImport[^>]*disabled/);
+  f.$('planningCapabilityImport').checked = true;
+  f.$('planningCapabilityEdit').checked = false;
+  f.$('planningCapabilityEdit').listeners.get('change')();
+  assert.equal(f.$('planningCapabilityImport').checked, false);
+  assert.equal(f.$('planningCapabilityImport').disabled, true);
+  f.$('planningCapabilityEdit').checked = true;
+  f.$('planningCapabilityEdit').listeners.get('change')();
+  assert.equal(f.$('planningCapabilityImport').disabled, false);
+});
+
+test('Planning modal rejects another tenant, member or malformed capabilities', async () => {
+  for (const result of [{ ...planningResponse(), tenantId: B }, { ...planningResponse(), membershipId: MEMBER_B },
+    { ...planningResponse(), capabilities: { edit: true } }]) {
+    const f = planningFixture({ tenantPlanningCapabilities: async () => result });
+    await f.c.openPlanningCapabilities(MEMBER_A);
+    assert.doesNotMatch(f.c.wsModalBody.innerHTML, /planningCapabilityEdit/);
+    assert.doesNotMatch(f.c.wsModalActions.innerHTML, /save-planning-capabilities/);
+  }
+});
+
+test('Planning response from a previous tenant cannot reopen permissions', async () => {
+  const pending = deferred();
+  const f = planningFixture({ tenantPlanningCapabilities: () => pending.promise });
+  const opening = f.c.openPlanningCapabilities(MEMBER_A);
+  await f.c.selectTenant(B);
+  pending.resolve(planningResponse());
+  await opening;
+  assert.equal(f.state.tenantId, B);
+  assert.equal(f.c.wsModal.hidden, true);
+  assert.doesNotMatch(f.c.wsModalBody.innerHTML, /planningCapabilityEdit/);
+});
+
+test('Planning write denial preserves server state and displays the error', async () => {
+  let payload;
+  const f = planningFixture({ tenantSetPlanningCapabilities: async (_tenant, _member, body) => { payload = body; throw { code: 'PERMISSION_DENIED' }; } });
+  await f.c.openPlanningCapabilities(MEMBER_A);
+  f.$('planningCapabilityEdit').checked = true;
+  f.$('planningCapabilityImport').checked = false;
+  f.$('planningCapabilityExport').checked = true;
+  const button = node();
+  await f.c.savePlanningCapabilities(MEMBER_A, button);
+  assert.deepEqual(JSON.parse(JSON.stringify(payload)), { edit: true, import: false, export: true });
+  assert.equal(f.$('planningCapabilitiesError').textContent, 'PERMISSION_DENIED');
+  assert.equal(button.disabled, false);
+  assert.equal(f.c.wsModal.hidden, false);
+  assert.equal(f.calls.some(call => call[0] === 'toast'), false);
+});
+
+test('non-Owner cannot open Planning delegation and invalid import never sends a write', async () => {
+  let calls = 0;
+  const f = planningFixture({ tenantPlanningCapabilities: async () => { calls++; return planningResponse(); },
+    tenantSetPlanningCapabilities: async () => assert.fail('invalid import cannot be sent') });
+  f.state.context.membership.isTenantOwner = false;
+  await f.c.openPlanningCapabilities(MEMBER_A);
+  assert.equal(calls, 0);
+  f.state.context.membership.isTenantOwner = true;
+  await f.c.openPlanningCapabilities(MEMBER_A);
+  f.$('planningCapabilityEdit').checked = false;
+  f.$('planningCapabilityImport').checked = true;
+  await f.c.savePlanningCapabilities(MEMBER_A, node());
+});
 
 test('A → B discards a late context response', async () => {
   const old = deferred();
@@ -343,7 +424,7 @@ async function fullPage(apiOverrides = {}) {
   f.c.Core.onUnauthenticated = (fn) => { ended = fn; };
   f.c.window.RoutflexCore = f.c.Core;
   f.c.window.RoutflexDestination = { resolve: async () => ({ kind: 'workspace' }) };
-  f.c.window.location = { replace: destination => f.calls.push(['navigate', destination]) };
+  f.c.window.location = { hash: '', replace: destination => f.calls.push(['navigate', destination]) };
   f.storage.set('routflex.core.tenantId', A);
   // Instrument only the VM copy. No exports/hooks are added to the product file.
   const executable = source.replace('  (async function boot() {', '  globalThis.workspace = { state, showAuth, loadMe, selectTenant };\n  globalThis.boot = (async function boot() {');

@@ -53,6 +53,22 @@
   let logoutBlocked = false;
   let sessionEndedLocally = false;
   let principal = null;
+  let sessionExpiresAt = null;
+  let sessionExpiryTimer = null;
+
+  function clearSessionDeadline() {
+    window.clearTimeout?.(sessionExpiryTimer);
+    sessionExpiryTimer = null;
+    sessionExpiresAt = null;
+  }
+  function checkSessionDeadline() {
+    if (sessionExpiresAt === null) return;
+    if (Date.now() >= sessionExpiresAt) { invalidateSession(sessionEnded()); return; }
+    // Browsers cap a timeout at about 24.8 days; longer server deadlines need rearming.
+    // This only clears local presentation. CORE remains the authority.
+    window.clearTimeout?.(sessionExpiryTimer);
+    sessionExpiryTimer = window.setTimeout?.(checkSessionDeadline, Math.min(sessionExpiresAt - Date.now(), 2147483647));
+  }
 
   function hasPendingLogout() {
     if (logoutBlocked) return true;
@@ -76,18 +92,22 @@
   function setToken(token) {
     const replacingSession = Boolean(principal || getToken());
     sessionEpoch += 1;
+    clearSessionDeadline();
     principal = null;
     sessionEndedLocally = false;
     storeToken(token);
     try { window.localStorage.setItem(STORAGE_SESSION_CHANGED, `${Date.now()}-${Math.random()}`); } catch (_) { /* hint only */ }
     if (replacingSession) notifyUnauthenticated(sessionEnded("replacement"));
   }
-  function clearSession() {
+  function clearSession(error = sessionEnded()) {
+    const alreadyEnded = sessionEndedLocally;
     sessionEpoch += 1;
+    clearSessionDeadline();
     principal = null;
     sessionEndedLocally = true;
     storeToken(null);
     try { window.sessionStorage.removeItem("routflex.core.tenantId"); } catch (_) { /* noop */ }
+    if (!alreadyEnded) notifyUnauthenticated(error);
   }
 
   /* Compatibility queries: the official client never enables demonstration. */
@@ -149,9 +169,7 @@
   }
 
   function invalidateSession(error) {
-    const alreadyEnded = sessionEndedLocally;
-    clearSession();
-    if (!alreadyEnded) notifyUnauthenticated(error);
+    clearSession(error);
   }
 
   function sessionEnded(presentationReason) {
@@ -178,12 +196,28 @@
       throw error;
     }
     principal = Object.freeze({ userId, sessionId });
+    if (payload.authenticationSessionExpiresAt !== undefined) {
+      const expiry = Date.parse(payload.authenticationSessionExpiresAt);
+      if (!Number.isFinite(expiry)) {
+        const error = new CoreApiError({ code: "IDENTITY_INVALID_RESPONSE", status: 502 });
+        invalidateSession(error);
+        throw error;
+      }
+      clearSessionDeadline();
+      sessionExpiresAt = expiry;
+      checkSessionDeadline();
+      if (sessionEndedLocally) throw sessionEnded();
+    }
     return payload;
   }
 
   /* Login, refresh e logout são os únicos requests que transportam o cookie.
      O refresh nunca é lido pelo JavaScript. */
-  async function send(path, { method = "GET", body, query, token, cookie = false } = {}) {
+  function checkAborted(signal) {
+    if (signal?.aborted) throw new CoreApiError({ code: "REQUEST_ABORTED", status: 0 });
+  }
+  async function send(path, { method = "GET", body, query, token, cookie = false, signal } = {}) {
+    checkAborted(signal);
     if (typeof path !== "string" || !/^\/(auth|me|catalog|admin|tenants|invitations)(\/|$|\?)/.test(path) || /[\\#]|\.\.|%2e|%2f|%5c/i.test(path)) {
       throw new CoreApiError({ code: "INVALID_API_PATH", status: 400 });
     }
@@ -206,14 +240,17 @@
         credentials: cookie ? "include" : "omit",
         redirect: "error",
         referrerPolicy: "no-referrer",
+        signal,
         body: body !== undefined ? JSON.stringify(body) : undefined,
       });
     } catch (_) {
+      checkAborted(signal);
       throw new CoreApiError({ code: "NETWORK_UNREACHABLE", message: ERROR_MESSAGES.NETWORK_UNREACHABLE, status: 0 });
     }
 
     let payload = null;
     const raw = await response.text();
+    checkAborted(signal);
     if (raw) {
       try { payload = JSON.parse(raw); } catch (_) { payload = null; }
     }
@@ -271,6 +308,7 @@
     if (logoutInFlight) return logoutInFlight;
     loggingOut = true;
     markPendingLogout();
+    invalidateSession(sessionEnded("logout"));
     const flight = (async () => {
       try {
         if (refreshInFlight) {
@@ -287,10 +325,12 @@
     return flight;
   }
 
-  async function request(path, { method = "GET", body, query, auth = true } = {}) {
+  async function request(path, { method = "GET", body, query, auth = true, signal } = {}) {
+    checkAborted(signal);
+    checkSessionDeadline();
     if (!auth) {
       if (path === "/auth/login" && hasPendingLogout()) await logout();
-      return send(path, { method, body, query, cookie: path === "/auth/login" });
+      return send(path, { method, body, query, cookie: path === "/auth/login", signal });
     }
     if (hasPendingLogout()) {
       await logout();
@@ -301,9 +341,10 @@
     const requestEpoch = sessionEpoch;
     let token = getToken();
     if (!token) token = await refreshAccessToken();
+    checkAborted(signal);
     if (requestEpoch !== sessionEpoch || loggingOut || sessionEndedLocally) throw sessionEnded();
     try {
-      const result = await send(path, { method, body, query, token });
+      const result = await send(path, { method, body, query, token, signal });
       if (requestEpoch !== sessionEpoch || loggingOut || sessionEndedLocally) throw sessionEnded();
       return path === "/me" ? acceptPrincipal(result) : result;
     } catch (error) {
@@ -313,9 +354,10 @@
       // Outra request pode ter renovado o token enquanto esta aguardava o 401.
       const current = getToken();
       const nextToken = current && current !== token ? current : await refreshAccessToken();
+      checkAborted(signal);
       if (requestEpoch !== sessionEpoch || loggingOut || sessionEndedLocally) throw sessionEnded();
       try {
-        const result = await send(path, { method, body, query, token: nextToken });
+        const result = await send(path, { method, body, query, token: nextToken, signal });
         if (requestEpoch !== sessionEpoch || loggingOut || sessionEndedLocally) throw sessionEnded();
         return path === "/me" ? acceptPrincipal(result) : result;
       } catch (retryError) {
@@ -337,8 +379,11 @@
     previewInvitation: (token, tenantId) => request("/invitations/preview", { method: "POST", body: { token, ...(tenantId ? { tenantId } : {}) }, auth: false }),
 
     /* autenticado (qualquer usuário) */
-    me: () => request("/me"),
+    me: ({ signal } = {}) => request("/me", { signal }),
     meContext: (tenantId) => request(`/me/context/${tenantId}`),
+    recoveryContactStatus: ({ signal } = {}) => request('/me/recovery-contact', { signal }),
+    recoveryContactRequest: (email, currentPassword, { signal } = {}) => request('/me/recovery-contact/request', { method: 'POST', body: { email, currentPassword }, signal }),
+    recoveryContactVerify: (challengeId, code, { signal } = {}) => request('/me/recovery-contact/verify', { method: 'POST', body: { challengeId, code }, signal }),
     catalog: () => request("/catalog"),
 
     /* plataforma (PLATFORM_OWNER) */
@@ -350,6 +395,7 @@
     adminDesignateOwner: (tenantId, email) => request(`/admin/tenants/${tenantId}/owner`, { method: "POST", body: { email } }),
     adminTenantRoles: (tenantId) => request(`/admin/tenants/${tenantId}/roles`),
     adminTenantMemberships: (tenantId) => request(`/admin/tenants/${tenantId}/memberships`),
+    adminInitiateRecovery: (tenantId, membershipId, { signal } = {}) => request(`/admin/tenants/${tenantId}/memberships/${membershipId}/recovery`, { method: 'POST', body: {}, signal }),
     adminTenantInvitations: (tenantId) => request(`/admin/tenants/${tenantId}/invitations`),
     adminRevokeInvitation: (tenantId, invitationId) => request(`/admin/tenants/${tenantId}/invitations/${invitationId}/revoke`, { method: "POST", body: {} }),
     adminSuspendTenant: (tenantId, reason) => request(`/admin/tenants/${tenantId}/suspend`, { method: "POST", body: { reason } }),
@@ -363,10 +409,16 @@
 
     /* escopo do tenant (permissões resolvidas no servidor) */
     tenantGet: (tenantId) => request(`/tenants/${tenantId}`),
+    tenantBilling: (tenantId) => request(`/tenants/${tenantId}/billing`),
+    tenantBillingSettings: (tenantId, body) => request(`/tenants/${tenantId}/billing/settings`, { method: 'PUT', body }),
+    tenantBillingCheckout: (tenantId, invoiceId, provider) => request(`/tenants/${tenantId}/billing/invoices/${invoiceId}/checkout`, { method: 'POST', body: { provider } }),
     tenantMemberships: (tenantId, query) => request(`/tenants/${tenantId}/memberships`, { query }),
+    tenantInitiateRecovery: (tenantId, membershipId, { signal } = {}) => request(`/tenants/${tenantId}/memberships/${membershipId}/recovery`, { method: 'POST', body: {}, signal }),
     tenantSuspendMember: (tenantId, membershipId, reason) => request(`/tenants/${tenantId}/memberships/${membershipId}/suspend`, { method: "POST", body: { reason } }),
     tenantReactivateMember: (tenantId, membershipId) => request(`/tenants/${tenantId}/memberships/${membershipId}/reactivate`, { method: "POST", body: {} }),
     tenantRoles: (tenantId) => request(`/tenants/${tenantId}/roles`),
+    tenantPlanningCapabilities: (tenantId, membershipId) => request(`/tenants/${tenantId}/memberships/${membershipId}/planning-capabilities`),
+    tenantSetPlanningCapabilities: (tenantId, membershipId, payload) => request(`/tenants/${tenantId}/memberships/${membershipId}/planning-capabilities`, { method: "PUT", body: payload }),
     tenantGrantRole: (tenantId, membershipId, roleId) => request(`/tenants/${tenantId}/memberships/${membershipId}/roles`, { method: "POST", body: { roleId } }),
     tenantRevokeRole: (tenantId, membershipId, roleId) => request(`/tenants/${tenantId}/memberships/${membershipId}/roles/${roleId}`, { method: "DELETE" }),
     tenantEntitlements: (tenantId) => request(`/tenants/${tenantId}/entitlements`),

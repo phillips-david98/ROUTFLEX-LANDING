@@ -8,6 +8,77 @@
   src: url("https://fonts.gstatic.com/s/dmserifdisplay/v17/-nFnOHM81r4j6k0gjAW3mujVU2B2G_Bx0g.woff2") format("woff2");
 }
 
+/* ATT-BILL-02: scoped billing surfaces reuse the Workspace design tokens. */
+.billing-section { scroll-margin-top: 24px; }
+.billing-secure { display: inline-flex; align-items: center; gap: 7px; color: #326078; font-size: .78rem; font-weight: 600; white-space: nowrap; }
+.billing-secure svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.6; }
+.billing-providers { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.billing-provider { display: flex; align-items: center; gap: 12px; padding: 17px 20px; border: 1px solid var(--line); border-radius: 14px; background: linear-gradient(135deg, #fff, #f5faff); }
+.billing-provider-mark { display: grid; place-items: center; flex: 0 0 64px; width: 64px; height: 64px; background: #fff; }
+.billing-provider-logo { display: block; width: 32px; height: 32px; object-fit: contain; }
+.billing-provider-logo[hidden] { display: none; }
+.billing-provider-copy { min-width: 0; overflow-wrap: anywhere; }
+.billing-provider strong, .billing-provider small { display: block; }
+.billing-provider strong { font-size: .9rem; color: var(--ink); }
+.billing-provider small { margin-top: 4px; color: var(--muted); font-size: .76rem; }
+.billing-provider-dot { margin-left: auto; flex-shrink: 0; width: 8px; height: 8px; border-radius: 50%; background: #91a0ad; }
+.billing-provider-dot.enabled { background: #16866f; box-shadow: 0 0 0 4px #e3f4ed; }
+.billing-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 22px 0 18px; }
+.billing-toolbar p { margin: 0; color: var(--body); font-size: .85rem; line-height: 1.6; }
+.billing-empty { padding: 36px 24px 40px; text-align: center; border: 1px dashed #c5d6e4; border-radius: 16px; background: radial-gradient(ellipse at 50% 0, #f0f8fd, #fff 70%); }
+.billing-empty-icon { display: grid; place-items: center; margin: 0 auto 17px; width: 48px; height: 48px; border-radius: 16px; border: 1px solid #d5e8f5; background: #f1f9ff; color: #1972ad; font-size: 1.4rem; }
+.billing-empty h3 { font-size: 1.12rem; font-weight: 650; margin: 0 0 10px; }
+.billing-empty p { max-width: 520px; margin: 0 auto 15px; color: var(--body); font-size: .87rem; line-height: 1.7; }
+.billing-empty > span:last-child { color: #52647a; font-size: .77rem; }
+.billing-invoices { display: grid; gap: 18px; }
+.billing-invoice { padding: 25px; background: #fff; border: 1px solid #d5e3ef; border-radius: 16px; box-shadow: 0 6px 20px #17456a08; }
+.billing-invoice-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.billing-eyebrow { color: #366986; text-transform: uppercase; font-size: .65rem; letter-spacing: .09em; font-weight: 700; }
+.billing-invoice h3 { margin: 8px 0 7px; font-size: 1.18rem; font-weight: 650; }
+.billing-invoice-heading p { margin: 0; color: var(--muted); font-size: .78rem; overflow-wrap: anywhere; }
+.billing-invoice-facts { display: grid; grid-template-columns: minmax(180px, 1fr) 1fr; gap: 24px; margin: 26px 0; }
+.billing-amount span, .billing-amount small { display: block; font-size: .75rem; color: var(--muted); }
+.billing-amount strong { display: block; font-size: clamp(1.7rem, 3vw, 2.3rem); font-weight: 650; letter-spacing: -.04em; margin: 7px 0; color: #134d7a; }
+.billing-invoice dl { display: grid; gap: 15px; margin: 0; align-content: center; border-left: 1px solid var(--line); padding-left: 24px; }
+.billing-invoice dt { color: var(--muted); font-size: .73rem; margin-bottom: 5px; }
+.billing-invoice dd { margin: 0; font-size: .86rem; font-weight: 600; }
+.billing-checkouts { display: flex; flex-wrap: wrap; gap: 12px; border-top: 1px solid var(--line-soft); padding-top: 20px; }
+.billing-checkouts button { min-height: 42px; }
+.billing-checkouts small { display: block; font-size: .7rem; color: var(--muted); margin-top: 7px; }
+.billing-checkouts p, .billing-caption { color: var(--muted); font-size: .76rem; line-height: 1.6; }
+.billing-caption { margin: 15px 0 0; }
+.billing-history, .billing-settings { border-top: 1px solid var(--line); margin-top: 24px; padding-top: 18px; }
+.billing-history summary, .billing-settings summary { cursor: pointer; font-size: .87rem; font-weight: 650; color: #1e4f78; padding: 6px 0; }
+.billing-history summary span { display: inline-block; margin-left: 8px; padding: 2px 7px; background: #eaf3fa; border-radius: 5px; font-size: .72rem; }
+.billing-table-scroll { overflow-x: auto; margin-top: 16px; }
+.billing-history table { width: 100%; border-collapse: collapse; text-align: left; font-size: .79rem; }
+.billing-history th { color: var(--muted); font-weight: 600; white-space: nowrap; background: #f6f9fc; }
+.billing-history td, .billing-history th { padding: 13px 14px; border-bottom: 1px solid var(--line-soft); vertical-align: middle; }
+.billing-history td small { display: block; margin-top: 5px; color: var(--muted); }
+.billing-history td strong { overflow-wrap: anywhere; }
+.billing-settings p, .billing-history > p { font-size: .8rem; color: var(--body); line-height: 1.7; max-width: 650px; }
+.billing-settings fieldset { display: flex; flex-wrap: wrap; gap: 18px; border: 0; padding: 0; margin: 18px 0; }
+.billing-settings legend { font-size: .75rem; color: var(--muted); margin-bottom: 12px; }
+.billing-settings label { display: flex; align-items: center; gap: 8px; min-height: 32px; font-size: .87rem; }
+.billing-settings input { width: 18px; height: 18px; accent-color: #096bb8; }
+#billingFeedback:not(:empty), #billingSettingsFeedback:not(:empty) { display: block; padding: 12px 15px; margin-bottom: 16px; background: #eff7fc; border: 1px solid #c9e1f2; border-radius: 9px; color: #204e72; font-size: .82rem; }
+#billingSettingsFeedback:not(:empty) { margin: 14px 0 0; }
+.billing-note { margin-top: 22px; line-height: 1.7; }
+.billing-section :is(button, summary, input, [tabindex]):focus-visible { outline: 3px solid #096bb8; outline-offset: 4px; }
+@media (max-width: 640px) {
+  .billing-providers { grid-template-columns: 1fr; gap: 10px; }
+  .billing-provider { padding: 14px 12px; gap: 10px; }
+  .billing-invoice { padding: 20px 16px; }
+  .billing-invoice-heading { flex-direction: column; gap: 12px; }
+  .billing-invoice-facts { grid-template-columns: 1fr; gap: 20px; }
+  .billing-invoice dl { border: 0; padding: 0; }
+  .billing-checkouts { flex-direction: column; }
+  .billing-checkouts button { width: 100%; }
+  .billing-toolbar { align-items: flex-start; }
+  .billing-secure { font-size: .7rem; }
+  .billing-history table { min-width: 640px; }
+}
+
 :root {
   --ws-font-display: "DM Serif Display", Georgia, "Times New Roman", serif;
   --ws-font-body: "Segoe UI", system-ui, Arial, sans-serif;
@@ -37,19 +108,21 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 .workspace-premium {
-  --bg: #edf2f8;
-  --surface: rgba(255, 255, 255, 0.96);
-  --surface-soft: #f6f9fd;
-  --muted: #596b80;
+  --bg: #f7f9fc;
+  --surface: rgba(255, 255, 255, 0.94);
+  --surface-soft: #f7f9fc;
+  --muted: #52647a;
   --accent: #096bb8;
-  --line: rgba(35, 76, 112, 0.12);
+  --line: rgba(34, 58, 87, 0.12);
   --radius: 14px;
-  --shadow: 0 12px 30px rgba(9, 24, 45, 0.065), 0 2px 5px rgba(15, 35, 58, 0.04), inset 0 1px 0 #ffffff;
-  --shadow-hover: 0 16px 32px rgba(15, 35, 58, 0.11), inset 0 1px 0 #ffffff;
+  --ws-radius-panel: 20px;
+  --ws-module-mark-size: 48px;
+  --shadow: 0 8px 24px rgba(15, 35, 58, 0.045), 0 2px 4px rgba(15, 35, 58, 0.025), inset 0 1px 0 #ffffff;
+  --shadow-hover: 0 12px 28px rgba(15, 35, 58, 0.075), inset 0 1px 0 #ffffff;
   --ws-focus: #096bb8;
   background:
-    radial-gradient(ellipse at 85% 0, rgba(59, 168, 245, 0.11), transparent 44rem),
-    var(--bg);
+    radial-gradient(ellipse at 85% 0, rgba(59, 168, 245, 0.04), transparent 42rem),
+    linear-gradient(180deg, #ffffff, var(--bg) 42rem);
 }
 button, input { font: inherit; }
 button {
@@ -1894,6 +1967,226 @@ tbody tr:last-child td { border-bottom: 0; }
 
 @media (max-width: 1120px) {
   .is-sidebar-collapsed .session-identity { margin-bottom: 0; }
+}
+
+/* ATT-WS-Visual: Executive Glass White. Workspace-only, with no added backdrop blur.
+   Keep module marks in the existing upper-left slot. Future official img/svg
+   assets fit the same 48px frame with contain sizing; initials are provisional.
+   Role lists wrap in full: no ellipsis, line clamp, fixed height or hidden data. */
+.workspace-premium .workspace-main {
+  padding: clamp(20px, 2.4vw, 40px);
+  gap: 24px;
+  align-content: start;
+}
+.workspace-premium .workspace-topbar {
+  align-items: center;
+  gap: 20px 32px;
+  padding-block: 4px 6px;
+}
+.workspace-premium .workspace-topbar h1 {
+  max-width: 27ch;
+  font-size: clamp(1.9rem, 2.4vw, 2.65rem);
+  line-height: 1.16;
+  text-shadow: none;
+}
+.workspace-premium .company-strip {
+  flex: 0 1 420px;
+  grid-template-columns: minmax(0, 1.3fr) repeat(2, minmax(0, 1fr));
+  border-radius: var(--radius);
+  box-shadow: none;
+  background: var(--line-soft);
+}
+.workspace-premium .company-strip div {
+  padding: 14px 16px;
+  text-align: center;
+}
+.workspace-premium .company-strip div:first-child { text-align: left; }
+.workspace-premium .company-strip strong { line-height: 1.5; }
+.workspace-premium .company-profile-card {
+  grid-template-columns: minmax(230px, 0.8fr) minmax(0, 1.4fr);
+  gap: 20px;
+  padding: 20px;
+  border-radius: var(--ws-radius-panel);
+  background: linear-gradient(130deg, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.90));
+}
+.workspace-premium .company-profile-main h2 {
+  font-size: 1.45rem;
+  line-height: 1.25;
+}
+.workspace-premium .company-profile-main p { line-height: 1.6; }
+.workspace-premium .company-profile-facts {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  border-radius: var(--radius);
+  background: var(--surface-soft);
+}
+.workspace-premium .company-profile-facts > div {
+  padding: 10px 12px;
+  background: transparent;
+}
+.workspace-premium .company-profile-facts > div:nth-child(-n+3) {
+  border-bottom: 1px solid var(--line-soft);
+}
+.workspace-premium .company-profile-facts > div:nth-child(4) { grid-column: span 2; }
+.workspace-premium .company-profile-facts strong {
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+.workspace-premium #factRoles { font-weight: 600; }
+.workspace-premium .metrics-grid { gap: 16px; }
+.workspace-premium .metric-card {
+  min-width: 0;
+  min-height: 128px;
+  padding: 16px;
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  justify-items: center;
+  align-content: start;
+  gap: 8px;
+  text-align: center;
+}
+.workspace-premium .metric-card span {
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+.workspace-premium .metric-card strong {
+  margin: 0;
+  font-size: 2.5rem;
+  font-weight: 750;
+  letter-spacing: -0.035em;
+}
+.workspace-premium .metric-card small {
+  max-width: 100%;
+  font-size: 0.78rem;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.workspace-premium .metric-card:nth-child(3) small { text-align: left; }
+.workspace-premium .workspace-section {
+  padding: 20px;
+  border-radius: var(--ws-radius-panel);
+}
+.workspace-premium .section-title h2 {
+  font-size: clamp(1.25rem, 1.4vw, 1.55rem);
+  line-height: 1.3;
+}
+.workspace-premium .section-title.compact h2 { font-size: 1.24rem; }
+.workspace-premium :is(.module-grid, .market-grid) {
+  gap: 16px;
+  margin-top: 16px;
+}
+.workspace-premium :is(.module-card, .market-card) {
+  min-width: 0;
+  padding: 16px;
+  gap: 10px;
+  background: linear-gradient(155deg, rgba(255, 255, 255, 0.99), rgba(246, 249, 253, 0.94));
+  box-shadow: inset 0 1px 0 #ffffff, 0 4px 12px rgba(15, 35, 58, 0.035);
+}
+.workspace-premium .module-card.module-active { border-color: rgba(9, 107, 184, 0.28); }
+.workspace-premium .module-head {
+  min-height: var(--ws-module-mark-size);
+  flex-wrap: wrap;
+}
+.workspace-premium .module-icon {
+  width: var(--ws-module-mark-size);
+  height: var(--ws-module-mark-size);
+  flex: 0 0 var(--ws-module-mark-size);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: var(--radius);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 4px 8px rgba(15, 35, 58, 0.06);
+  font-size: 0.95rem;
+  line-height: 1;
+  letter-spacing: 0.025em;
+}
+.workspace-premium .module-icon :is(img, svg) {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 6px;
+  object-fit: contain;
+}
+.workspace-premium .module-card h3 {
+  font-size: 1.3rem;
+  line-height: 1.25;
+  text-align: center;
+}
+.workspace-premium :is(.module-card, .market-card) p {
+  font-size: 0.85rem;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.workspace-premium .module-card > p:not(.ws-card-note) { min-height: 3.2em; }
+.workspace-premium .module-meta {
+  gap: 0;
+  margin-top: 2px;
+  border-radius: 10px;
+  background: transparent;
+}
+.workspace-premium .module-meta div {
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.workspace-premium .module-meta div:last-child { border-bottom: 0; }
+.workspace-premium .module-meta :is(dt, dd) {
+  font-size: 0.77rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.workspace-premium .module-meta dt { flex: 0 1 45%; }
+.workspace-premium .module-meta dd { flex: 1 1 55%; }
+.workspace-premium .workspace-main .status {
+  max-width: 100%;
+  min-height: 26px;
+  padding: 4px 10px;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+.workspace-premium .module-card .ws-card-actions {
+  gap: 8px;
+  padding-top: 2px;
+}
+.workspace-premium .module-card .ws-card-actions > :is(button, .ws-btn-link) {
+  flex: 1 1 120px;
+  min-height: 42px;
+  padding: 10px 14px;
+  line-height: 1.35;
+  text-align: center;
+}
+.workspace-premium :is(.table-card, .security-card, .license-card, .settings-card) {
+  background: #ffffff;
+  box-shadow: none;
+}
+.workspace-premium :is(.security-card, .settings-card, .ws-license-head) strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.workspace-premium .ws-license-block {
+  padding: 16px;
+  border-radius: 10px;
+}
+.workspace-premium .ws-section-note { line-height: 1.65; }
+
+@media (max-width: 1399px) {
+  .workspace-premium :is(.module-grid, .market-grid) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .workspace-premium .workspace-columns { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 1120px) {
+  .workspace-premium .company-strip { flex-basis: auto; width: 100%; }
+  .workspace-premium .company-profile-card { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 720px) {
+  .workspace-premium .workspace-main { padding: 16px; gap: 18px; }
+  .workspace-premium :is(.workspace-section, .company-profile-card) { padding: 18px; }
+  .workspace-premium :is(.module-grid, .market-grid, .company-profile-facts) { grid-template-columns: minmax(0, 1fr); }
+  .workspace-premium .company-profile-facts > div:nth-child(4) { grid-column: auto; }
+  .workspace-premium .company-profile-facts > div:not(:last-child) { border-bottom: 1px solid var(--line-soft); }
+}
+@media (max-width: 480px) {
+  .workspace-premium .company-strip { grid-template-columns: minmax(0, 1fr); }
+  .workspace-premium .company-strip div { padding: 12px 14px; text-align: left; }
+  .workspace-premium .company-profile-main { align-items: flex-start; }
 }
 
 /* Administrative controls only; invitation and credential-entry styles stay independent. */

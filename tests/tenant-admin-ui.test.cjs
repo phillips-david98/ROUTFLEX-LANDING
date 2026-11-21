@@ -6,6 +6,11 @@ const vm = require('node:vm');
 
 // Executa as funções reais de UI com DOM/API controlados, sem exportar hooks no produto.
 function routine(file, name, context) {
+  // Contract-focused routines use an already-current synthetic modal context.
+  // Full lifecycle/generation guards are exercised by cc-identity-context.test.cjs.
+  if (file === 'control-center/cc-live.js') {
+    context = { beginAction: () => ({}), actionIsCurrent: () => true, ...context };
+  }
   const source = fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
   const declarations = [...source.matchAll(/^  (?:async )?function (\w+)\(/gm)];
   const index = declarations.findIndex((match) => match[1] === name);

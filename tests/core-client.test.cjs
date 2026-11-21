@@ -7,6 +7,20 @@ const vm = require('node:vm');
 const source = fs.readFileSync(path.join(__dirname, '..', 'core-client.js'), 'utf8');
 const USER_A = '11111111-1111-4111-8111-111111111111';
 const SESSION_A = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+
+test('Planning capabilities use tenant-scoped GET/PUT and exactly the three controls', async () => {
+  const calls = [];
+  const { Core } = client(async (url, options) => { calls.push({ url, options }); return reply(200, {}); });
+  Core.setToken('owner-access');
+  await Core.api.tenantPlanningCapabilities('tenant-a', 'member-a');
+  await Core.api.tenantSetPlanningCapabilities('tenant-a', 'member-a', { edit: true, import: false, export: true });
+  assert.deepEqual(calls.map(({ url, options }) => [new URL(url).pathname, options.method]), [
+    ['/core/tenants/tenant-a/memberships/member-a/planning-capabilities', 'GET'],
+    ['/core/tenants/tenant-a/memberships/member-a/planning-capabilities', 'PUT'],
+  ]);
+  assert.deepEqual(JSON.parse(calls[1].options.body), { edit: true, import: false, export: true });
+  assert.ok(calls.every(({ options }) => options.headers.Authorization === 'Bearer owner-access'));
+});
 function identity(tenants = []) {
   return { user: { id: USER_A, status: 'ACTIVE' }, authenticationSessionId: SESSION_A, tenants };
 }
@@ -76,15 +90,75 @@ function reply(status, body = null) {
   };
 }
 
-function client(fetch, { sessionStorage = storage(), localStorage = storage(), search = '', href = 'http://localhost:5500/workspace.html' } = {}) {
+function client(fetch, { sessionStorage = storage(), localStorage = storage(), search = '', href = 'http://localhost:5500/workspace.html', clock = Date } = {}) {
   const window = {
     sessionStorage,
     localStorage,
     location: { search, href },
   };
-  vm.runInNewContext(source, { window, fetch, URL, URLSearchParams, console });
+  vm.runInNewContext(source, { window, fetch, URL, URLSearchParams, console, Date: clock });
   return { Core: window.RoutflexCore, window, sessionStorage };
 }
+
+test('logout and explicit local clearing notify immediately, before remote logout settles', async () => {
+  let resolveLogout, notifications = 0;
+  const { Core } = client(() => new Promise(resolve => { resolveLogout = resolve; }));
+  Core.setToken('synthetic-access');
+  Core.onUnauthenticated(() => notifications++);
+  const pending = Core.logout();
+  assert.equal(Core.getToken(), null);
+  assert.equal(notifications, 1);
+  resolveLogout(reply(204)); await pending;
+  assert.equal(notifications, 1);
+  Core.setToken('synthetic-next'); Core.clearSession();
+  assert.equal(notifications, 2);
+});
+
+test('recovery cancellation is passed to fetch and prevents a retry or late result', async () => {
+  const controller = new AbortController(), calls = [];
+  let finish;
+  const { Core } = client((url, options) => {
+    calls.push({ url, options });
+    return new Promise(resolve => { finish = resolve; });
+  });
+  Core.setToken('synthetic-access');
+  const pending = Core.api.recoveryContactRequest('synthetic@example.test', 'synthetic-only', { signal: controller.signal });
+  assert.equal(calls[0].options.signal, controller.signal);
+  controller.abort(); finish(reply(401));
+  await assert.rejects(pending, error => error.code === 'REQUEST_ABORTED');
+  assert.equal(calls.length, 1);
+  await assert.rejects(Core.api.recoveryContactVerify('synthetic', '000000', { signal: controller.signal }), error => error.code === 'REQUEST_ABORTED');
+  assert.equal(calls.length, 1);
+});
+
+test('cancelling a recovery request waiting for shared refresh cannot submit afterwards', async () => {
+  const controller = new AbortController(), calls = [];
+  let finish;
+  const { Core } = client(url => {
+    calls.push(new URL(url).pathname);
+    return new Promise(resolve => { finish = resolve; });
+  });
+  const pending = Core.api.recoveryContactRequest('synthetic@example.test', 'synthetic-only', { signal: controller.signal });
+  controller.abort(); finish(reply(200, { accessToken: 'synthetic-access' }));
+  await assert.rejects(pending, error => error.code === 'REQUEST_ABORTED');
+  assert.deepEqual(calls, ['/core/auth/refresh']);
+});
+
+test('a session deadline beyond the browser timeout limit rearms until the actual deadline', async () => {
+  let now = Date.now(), ended = 0, timerId = 0;
+  const expiry = now + 31 * 24 * 60 * 60 * 1000, timers = new Map();
+  class Clock extends Date { static now() { return now; } }
+  const { Core, window } = client(async () => reply(200, { ...identity(), authenticationSessionExpiresAt: new Date(expiry).toISOString() }), { clock: Clock });
+  window.setTimeout = (callback, ms) => { timers.set(++timerId, { callback, ms }); return timerId; };
+  window.clearTimeout = id => timers.delete(id);
+  Core.setToken('synthetic-access'); Core.onUnauthenticated(() => ended++); await Core.api.me();
+  let timer = [...timers.values()][0]; assert.equal(timer.ms, 2147483647);
+  now += timer.ms; timer.callback();
+  assert.equal(ended, 0); assert.equal(timers.size, 1);
+  timer = [...timers.values()][0]; assert.equal(timer.ms, expiry - now);
+  now += timer.ms; timer.callback();
+  assert.equal(ended, 1); assert.equal(Core.getToken(), null); assert.equal(timers.size, 0);
+});
 
 test('login envia credenciais e recebe access sem expor refresh ao JavaScript', async () => {
   const calls = [];
